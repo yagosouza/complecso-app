@@ -1,5 +1,5 @@
 // src/context/AppContext.js
-import React, { createContext, useContext, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useMemo, useCallback, useState } from 'react';
 import useStickyState from '../hooks/useStickyState';
 import { initialUsers, initialClasses } from '../constants/mockData';
 import { getBillingCycle } from '../utils/helpers';
@@ -12,6 +12,7 @@ export const AppProvider = ({ children }) => {
     const [classes, setClasses] = useStickyState(initialClasses, 'classes');
     const [currentUser, setCurrentUser] = useStickyState(null, 'currentUser');
     const [cancellationDeadlineHours, setCancellationDeadlineHours] = useStickyState(24, 'cancellationDeadline');
+    const [view, setView] = useState('dashboard');
 
     // --- Funções Estabilizadas com useCallback ---
 
@@ -144,7 +145,7 @@ export const AppProvider = ({ children }) => {
         performLateCancellation,
         handleCreateClass,
         handleCreateUser,
-        handleDeleteClass,
+        handleDeleteClass, view, setView
     }), [
         users, 
         setUsers, 
@@ -164,7 +165,7 @@ export const AppProvider = ({ children }) => {
         performLateCancellation, 
         handleCreateClass, 
         handleCreateUser, 
-        handleDeleteClass
+        handleDeleteClass, view, setView
     ]);
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -20,7 +20,6 @@ export default function StudentDashboard() {
     const [displayedDate, setDisplayedDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
     const [modalState, setModalState] = useState({ isOpen: false, studentId: null, classId: null });
 
-    // Calcula os dados específicos do aluno logado
     const student = useMemo(() => {
         if (!currentUser || currentUser.role !== 'student') return null;
         const studentData = users.find(u => u.id === currentUser.id);
@@ -29,13 +28,12 @@ export default function StudentDashboard() {
         const { start, end } = getBillingCycle(studentData.paymentDueDate);
         const usedInBillingCycle = studentData.checkedInClassIds.filter(id => {
             const c = classes.find(cls => cls.id === id);
-            return c && c.date >= start && c.date <= end;
+            return c && new Date(c.date) >= start && new Date(c.date) <= end;
         }).length;
-
+        
         return { ...studentData, plan: { ...studentData.plan, usedInBillingCycle } };
     }, [currentUser, users, classes]);
 
-    // Filtra as aulas relevantes para o aluno e para o mês exibido
     const filteredClasses = useMemo(() => {
         if (!student) return [];
         return classes
@@ -89,7 +87,7 @@ export default function StudentDashboard() {
                 {`Você está cancelando com menos de ${cancellationDeadlineHours} horas de antecedência. Seu crédito não será estornado. Deseja continuar?`}
             </ConfirmModal>
 
-            <div className="p-4 md:p-8 space-y-8">
+            <div className="space-y-6">
                 <div className="bg-white p-6 rounded-xl shadow-md flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                         <h2 className="text-2xl font-bold text-black">Olá, {student.name}!</h2>
