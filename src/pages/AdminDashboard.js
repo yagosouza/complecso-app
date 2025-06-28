@@ -1,7 +1,7 @@
 // src/pages/AdminDashboard.js
 import React from 'react';
-import UserManagementView from './adminDashboard/UserManagementView';
-import ClassManagementView from './adminDashboard/ClassManagementView';
+import UserManagementView from './adminDashboardManagement/UserManagementView';
+import ClassManagementView from './adminDashboardManagement/ClassManagementView';
 import { useAppContext } from '../context/AppContext';
 
 export default function AdminDashboard() {
