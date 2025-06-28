@@ -13,7 +13,7 @@ export default function UserManagementView() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState(null);
     const [extraClassesToAdd, setExtraClassesToAdd] = useState(0);
-    const [activeTab, setActiveTab] = useState('students'); // Estado para as abas
+    const [activeTab, setActiveTab] = useState('students'); // Estado para as abas de Alunos e Professores
 
     const handleSearchTermChange = useCallback((e) => setSearchTerm(e.target.value), []);
 

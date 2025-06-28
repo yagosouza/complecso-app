@@ -5,7 +5,7 @@ import ClassManagementView from './adminDashboard/ClassManagementView';
 import { useAppContext } from '../context/AppContext';
 
 export default function AdminDashboard() {
-    // A view é controlada pela BottomNavbar e vem do contexto
+    // A view é controlada pela BottomNavbar e vem do context
     const { view, cancellationDeadlineHours, setCancellationDeadlineHours } = useAppContext();
 
     // Renderiza a view de acordo com a aba/botão selecionado
