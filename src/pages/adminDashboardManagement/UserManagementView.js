@@ -1,4 +1,4 @@
-// src/pages/AdminDashboard/UserManagementView.js
+// src/pages/adminDashboardManagement/UserManagementView.js
 import React, { useState, useMemo, useCallback } from 'react';
 import { Search, PlusCircle } from 'lucide-react';
 import UserList from '../../components/ui/UserList';
@@ -6,38 +6,34 @@ import FullScreenFormModal from '../../components/modals/FullScreenFormModal';
 import { useAppContext } from '../../context/AppContext';
 import { maskPhone } from '../../utils/helpers';
 import { CLASS_TYPES } from '../../constants/mockData';
+import CreditBatchManager from './CreditBatchManager';
 
 export default function UserManagementView() {
-    const { users, setUsers, handleCreateUser, handleResetPassword, handleAddExtraClasses } = useAppContext();
+    const { users, setUsers, handleCreateUser, handleResetPassword } = useAppContext();
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState(null);
-    const [extraClassesToAdd, setExtraClassesToAdd] = useState(0);
-    const [activeTab, setActiveTab] = useState('students'); // Estado para as abas de Alunos e Professores
+    const [activeTab, setActiveTab] = useState('students');
 
     const handleSearchTermChange = useCallback((e) => setSearchTerm(e.target.value), []);
 
     const openModalForNew = useCallback(() => {
         setEditingUser({
-            id: null, name: '', username: '', role: activeTab === 'students' ? 'student' : 'teacher', status: 'active', phone: '', email: '', birthDate: '', paymentDueDate: 10, plan: { total: 8, name: 'Plano 8 Aulas', extraClasses: [] }, enrolledIn: [], specialties: []
+            id: null, name: '', username: '', role: activeTab === 'students' ? 'student' : 'teacher', status: 'active', phone: '', email: '', birthDate: '', enrolledIn: [], specialties: [], creditBatches: []
         });
         setIsModalOpen(true);
     }, [activeTab]);
     
     const openModalForEdit = useCallback((user) => {
-        setEditingUser({ ...user, plan: user.plan ? { ...user.plan } : { total: 0, name: 'Plano 0 Aulas' } });
-        setExtraClassesToAdd(0);
+        setEditingUser({ ...user });
         setIsModalOpen(true);
     }, []);
     
     const handleFormChange = (e) => {
         const { name, value, type, checked } = e.target;
         setEditingUser(currentUser => {
-            const updatedUser = JSON.parse(JSON.stringify(currentUser)); // Deep copy para evitar mutação
-            if (name === 'plan.total') {
-                updatedUser.plan.total = value;
-                updatedUser.plan.name = `Plano ${value} Aulas`;
-            } else if (type === 'checkbox') {
+            const updatedUser = { ...currentUser };
+            if (type === 'checkbox') {
                  const currentArray = updatedUser[name] || [];
                  updatedUser[name] = checked ? [...currentArray, value] : currentArray.filter(v => v !== value);
             } else {
@@ -52,16 +48,8 @@ export default function UserManagementView() {
         const { id, ...formData } = editingUser;
         const userData = { ...formData, phone: formData.phone.replace(/\D/g, '') };
     
-        if (userData.role === 'student') {
-            userData.plan = { ...userData.plan, total: parseInt(userData.plan.total, 10) || 0 };
-        } else {
-            userData.plan = null;
-            delete userData.enrolledIn;
-        }
-    
         if (id) {
-            setUsers(currentUsers => currentUsers.map(u => u.id === id ? { ...u, ...userData } : u));
-            if (extraClassesToAdd > 0) handleAddExtraClasses(id, extraClassesToAdd, new Date());
+            setUsers(currentUsers => currentUsers.map(u => u.id === id ? userData : u));
         } else {
             handleCreateUser({ ...userData, password: 'password', checkedInClassIds: [], lateCancellations: [] });
         }
@@ -100,16 +88,29 @@ export default function UserManagementView() {
                         <div><label className="font-semibold">Status</label><select name="status" value={editingUser.status} onChange={handleFormChange} className="w-full mt-1 p-2 border rounded-md bg-white"><option value="active">Ativo</option><option value="inactive">Inativo</option></select></div>
                         
                         {editingUser.role === 'student' && (
-                            <div className="p-4 border rounded-md space-y-4">
-                                <h4 className="font-semibold">Dados de Aluno</h4>
-                                <div><label className="font-semibold">Plano Mensal (Créditos):</label><input type="number" name="plan.total" value={editingUser.plan?.total || 0} onChange={handleFormChange} className="w-full mt-1 p-2 border rounded-md"/></div>
-                                <div><label className="font-semibold">Dia de Vencimento:</label><input type="number" name="paymentDueDate" value={editingUser.paymentDueDate} onChange={handleFormChange} min="1" max="31" className="w-full mt-1 p-2 border rounded-md"/></div>
-                                {editingUser.id && <div><label className="font-semibold">Adicionar Aulas Extras (este mês):</label><input type="number" value={extraClassesToAdd} onChange={(e) => setExtraClassesToAdd(parseInt(e.target.value) || 0)} className="w-full mt-1 p-2 border rounded-md"/></div>}
-                                <div>
-                                    <label className="font-semibold">Modalidades:</label>
-                                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 mt-2">{CLASS_TYPES.map(type => (<label key={type} className="flex items-center gap-2"><input type="checkbox" name="enrolledIn" value={type} checked={editingUser.enrolledIn?.includes(type)} onChange={handleFormChange}/>{type}</label>))}</div>
+                            <>
+                                <div className="p-4 border rounded-md space-y-4">
+                                    <h4 className="font-semibold">Dados de Aluno</h4>
+                                    <div>
+                                        <label className="font-semibold">Modalidades:</label>
+                                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
+                                            {CLASS_TYPES.map(type => (
+                                                <label key={type} className="flex items-center gap-2">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        name="enrolledIn" 
+                                                        value={type} 
+                                                        checked={editingUser.enrolledIn?.includes(type)} 
+                                                        onChange={handleFormChange}
+                                                    />
+                                                    {type}
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
+                                <CreditBatchManager userId={editingUser.id} />
+                            </>
                         )}
                         
                         {editingUser.role === 'teacher' && (
@@ -120,7 +121,7 @@ export default function UserManagementView() {
                              </div>
                         )}
                         
-                        {editingUser.id && <button onClick={() => handleResetPassword(editingUser.id)} className="text-sm text-blue-600 hover:underline mt-2">Redefinir Senha</button>}
+                        {editingUser.id && <button type="button" onClick={() => handleResetPassword(editingUser.id)} className="text-sm text-blue-600 hover:underline mt-2">Redefinir Senha</button>}
                     </div>
                 )}
             </FullScreenFormModal>

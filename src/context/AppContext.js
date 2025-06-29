@@ -2,10 +2,8 @@
 import React, { createContext, useContext, useMemo, useCallback, useState } from 'react';
 import useStickyState from '../hooks/useStickyState';
 import { initialUsers, initialClasses } from '../constants/mockData';
-import { getBillingCycle } from '../utils/helpers';
 
 const AppContext = createContext();
-const today = new Date();
 
 export const AppProvider = ({ children }) => {
     const [users, setUsers] = useStickyState(initialUsers, 'users');
@@ -13,8 +11,6 @@ export const AppProvider = ({ children }) => {
     const [currentUser, setCurrentUser] = useStickyState(null, 'currentUser');
     const [cancellationDeadlineHours, setCancellationDeadlineHours] = useStickyState(24, 'cancellationDeadline');
     const [view, setView] = useState('dashboard');
-
-    // --- Funções Estabilizadas com useCallback ---
 
     const handleLogin = useCallback((username, password, callback) => {
         const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
@@ -50,60 +46,6 @@ export const AppProvider = ({ children }) => {
             alert('Senha redefinida com sucesso!');
         }
     }, [setUsers]);
-
-    const handleAddExtraClasses = useCallback((userId, count, displayedDate) => {
-        const monthIdentifier = `${displayedDate.getFullYear()}-${displayedDate.getMonth()}`;
-        setUsers(prevUsers => prevUsers.map(u => {
-            if (u.id === userId) {
-                const newPlan = { ...u.plan };
-                let extraClasses = [...(newPlan.extraClasses || [])];
-                const monthIndex = extraClasses.findIndex(e => e.month === monthIdentifier);
-                if (monthIndex > -1) {
-                    extraClasses[monthIndex] = { ...extraClasses[monthIndex], count: extraClasses[monthIndex].count + count };
-                } else {
-                    extraClasses.push({ month: monthIdentifier, count });
-                }
-                return { ...u, plan: { ...newPlan, extraClasses } };
-            }
-            return u;
-        }));
-    }, [setUsers]);
-
-    const handleCheckIn = useCallback((studentId, classId) => {
-        const student = users.find(u => u.id === studentId);
-        const aClass = classes.find(c => c.id === classId);
-        if (!student || !aClass) return;
-
-        // ... (resto da lógica de check-in) ...
-        const { start, end } = getBillingCycle(student.paymentDueDate);
-        const usedInBillingCycle = student.checkedInClassIds.filter(id => {
-            const c = classes.find(cls => cls.id === id);
-            return c && c.date >= start && c.date <= end;
-        }).length;
-        
-        const extraClassesForMonth = student.plan.extraClasses?.find(ec => ec.month === `${today.getFullYear()}-${today.getMonth()}`)?.count || 0;
-        if (student.plan.total + extraClassesForMonth - usedInBillingCycle <= 0) {
-            alert("Você não tem créditos de aula suficientes para este ciclo.");
-            return;
-        }
-
-        setUsers(currentUsers => currentUsers.map(u => u.id === studentId ? { ...u, checkedInClassIds: [...u.checkedInClassIds, classId] } : u));
-        setClasses(currentClasses => currentClasses.map(c => c.id === classId ? { ...c, checkedInStudents: [...c.checkedInStudents, studentId] } : c));
-    }, [users, classes, setUsers, setClasses]);
-
-    const performNormalCancellation = useCallback((studentId, classId) => {
-        setUsers(currentUsers => currentUsers.map(u => u.id === studentId ? { ...u, checkedInClassIds: u.checkedInClassIds.filter(id => id !== classId) } : u));
-        setClasses(currentClasses => currentClasses.map(c => c.id === classId ? { ...c, checkedInStudents: c.checkedInStudents.filter(id => id !== studentId) } : c));
-    }, [setUsers, setClasses]);
-
-    const performLateCancellation = useCallback((studentId, classId) => {
-        setClasses(currentClasses => currentClasses.map(c => {
-            if (c.id === classId) {
-                return { ...c, checkedInStudents: c.checkedInStudents.filter(id => id !== studentId), lateCancellations: [...(c.lateCancellations || []), studentId] };
-            }
-            return c;
-        }));
-    }, [setClasses]);
     
     const handleCreateClass = useCallback((newClassData, teacherId) => {
         setClasses(prev => [...prev, { id: Date.now(), ...newClassData, teacherId, checkedInStudents: [], lateCancellations: [] }]);
@@ -124,8 +66,6 @@ export const AppProvider = ({ children }) => {
         setClasses(currentClasses => currentClasses.filter(c => c.id !== classId));
     }, [setUsers, setClasses]);
 
-    // --- Objeto de Contexto Memorizado ---
-
     const value = useMemo(() => ({
         users,
         setUsers,
@@ -139,33 +79,17 @@ export const AppProvider = ({ children }) => {
         handleLogout,
         handleUpdatePassword,
         handleResetPassword,
-        handleAddExtraClasses,
-        handleCheckIn,
-        performNormalCancellation,
-        performLateCancellation,
         handleCreateClass,
         handleCreateUser,
-        handleDeleteClass, view, setView
+        handleDeleteClass, 
+        view, 
+        setView
     }), [
-        users, 
-        setUsers, 
-        classes, 
-        setClasses, 
-        currentUser, 
-        setCurrentUser, 
-        cancellationDeadlineHours, 
-        setCancellationDeadlineHours,
-        handleLogin, 
-        handleLogout, 
-        handleUpdatePassword, 
-        handleResetPassword, 
-        handleAddExtraClasses, 
-        handleCheckIn, 
-        performNormalCancellation, 
-        performLateCancellation, 
-        handleCreateClass, 
-        handleCreateUser, 
-        handleDeleteClass, view, setView
+        users, setUsers, classes, setClasses, currentUser, setCurrentUser, 
+        cancellationDeadlineHours, setCancellationDeadlineHours,
+        handleLogin, handleLogout, handleUpdatePassword, handleResetPassword, 
+        handleCreateClass, handleCreateUser, handleDeleteClass, 
+        view, setView
     ]);
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

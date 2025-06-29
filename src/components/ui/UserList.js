@@ -1,6 +1,8 @@
+// src/components/ui/UserList.js
 import React from 'react';
-import { Shield, Users, Edit3 } from 'lucide-react';
+import { Shield, Users, Edit3, CreditCard } from 'lucide-react';
 import { maskPhone } from '../../utils/helpers';
+import { calculateTotalCredits } from '../../utils/creditHelpers'; // Importando a função auxiliar
 
 const UserList = React.memo(({ title, users, onEditClick }) => {
     const Icon = title === 'Professores' ? Shield : Users;
@@ -11,21 +13,36 @@ const UserList = React.memo(({ title, users, onEditClick }) => {
                 <Icon className="text-[#ddfb3b]" /> {title} ({users.length})
             </h3>
             <div className="space-y-3">
-                {users.map(user => (
-                    <div key={user.id} className={`p-3 border rounded-md flex justify-between items-center ${user.status === 'inactive' ? 'bg-gray-50 opacity-60' : ''}`}>
-                        <div className="flex items-center gap-3">
-                            <span className={`w-3 h-3 rounded-full ${user.status === 'active' ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                            <div>
-                                <p className="font-semibold text-black">{user.name}</p>
-                                <p className="text-sm text-gray-600">@{user.username}</p>
-                                <p className="text-sm text-gray-500">{maskPhone(user.phone)}</p>
+                {users.map(user => {
+                    // Calcula os créditos apenas se for um aluno
+                    const totalCredits = user.role === 'student' 
+                        ? calculateTotalCredits(user.creditBatches) 
+                        : null;
+
+                    return (
+                        <div key={user.id} className={`p-3 border rounded-md flex justify-between items-center ${user.status === 'inactive' ? 'bg-gray-50 opacity-60' : ''}`}>
+                            <div className="flex items-center gap-3">
+                                <span className={`w-3 h-3 rounded-full ${user.status === 'active' ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                                <div>
+                                    <p className="font-semibold text-black">{user.name}</p>
+                                    <p className="text-sm text-gray-600">@{user.username}</p>
+                                    {/* Mostra os créditos para alunos e o telefone para professores */}
+                                    {user.role === 'student' ? (
+                                        <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                                            <CreditCard className="w-4 h-4" />
+                                            Créditos: <strong>{totalCredits}</strong>
+                                        </p>
+                                    ) : (
+                                         <p className="text-sm text-gray-500">{maskPhone(user.phone)}</p>
+                                    )}
+                                </div>
                             </div>
+                            <button onClick={() => onEditClick(user)} className="p-2 hover:bg-gray-100 rounded-full">
+                                <Edit3 className="w-4 h-4 text-gray-600"/>
+                            </button>
                         </div>
-                        <button onClick={() => onEditClick(user)} className="p-2 hover:bg-gray-100 rounded-full">
-                            <Edit3 className="w-4 h-4 text-gray-600"/>
-                        </button>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );
