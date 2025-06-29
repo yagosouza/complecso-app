@@ -25,7 +25,7 @@ export default function BottomNavbar() {
     if (items.length <= 1) return null;
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-t-lg md:hidden z-40">
+        <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-t-lg pb-[env(safe-area-inset-bottom)] md:hidden z-50">
             <div className="flex justify-around items-center h-16">
                 {items.map(item => (
                     <button
