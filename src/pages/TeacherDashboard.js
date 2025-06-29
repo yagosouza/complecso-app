@@ -1,21 +1,23 @@
+// src/pages/TeacherDashboard.js
 import React, { useState, useMemo, useCallback } from 'react';
 import { PlusCircle } from 'lucide-react';
 import MonthNavigator from '../components/ui/MonthNavigator';
 import ConfirmModal from '../components/modals/ConfirmModal';
 import FullScreenFormModal from '../components/modals/FullScreenFormModal';
+import ClassItem from '../components/ui/ClassItem'; // Importação do componente reutilizável
 import { useAppContext } from '../context/AppContext';
 
 const initialFormState = { date: '', time: '', maxStudents: 10, type: '' };
 
 export default function TeacherDashboard() {
-    const { currentUser, classes, handleCreateClass, handleDeleteClass } = useAppContext();
+    // Adicionamos 'setClasses' e 'users' para edição e exibição dos nomes
+    const { currentUser, classes, setClasses, users, handleCreateClass, handleDeleteClass } = useAppContext();
     
     const [displayedDate, setDisplayedDate] = useState(new Date());
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [classForm, setClassForm] = useState(initialFormState);
+    const [editingClass, setEditingClass] = useState(null); // Estado para controlar a edição
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, classId: null });
-
-    //const students = useMemo(() => users.filter(u => u.role === 'student'), [users]);
     
     const filteredClasses = useMemo(() => {
         return classes
@@ -32,6 +34,7 @@ export default function TeacherDashboard() {
         setClassForm(current => ({ ...current, [name]: value }));
     }, []);
 
+    // Lógica para salvar (agora trata criação e edição)
     const handleSaveClass = () => {
         const { date, time, maxStudents, type } = classForm;
         if (!date || !time || !type) {
@@ -42,14 +45,42 @@ export default function TeacherDashboard() {
         const [hour, minute] = time.split(':');
         const classDate = new Date(year, parseInt(month) - 1, day, hour, minute);
 
-        handleCreateClass({ date: classDate, maxStudents: parseInt(maxStudents), type }, currentUser.id);
+        const classData = { date: classDate, maxStudents: parseInt(maxStudents), type };
+
+        if (editingClass) {
+            // Atualiza a aula existente
+            setClasses(prevClasses => prevClasses.map(c => 
+                c.id === editingClass.id 
+                ? { ...editingClass, ...classData } 
+                : c
+            ));
+        } else {
+            // Cria uma nova aula
+            handleCreateClass(classData, currentUser.id);
+        }
+        
         setIsModalOpen(false);
     };
     
+    // Abre o modal para uma nova aula
     const openModalForNew = () => {
+        setEditingClass(null); // Garante que não está em modo de edição
         setClassForm(initialFormState);
         setIsModalOpen(true);
     };
+
+    // Abre o modal para editar uma aula existente
+    const openModalForEdit = useCallback((cls) => {
+        setEditingClass(cls);
+        const d = new Date(cls.date);
+        setClassForm({
+            date: d.toISOString().split('T')[0],
+            time: d.toTimeString().substring(0, 5),
+            maxStudents: cls.maxStudents,
+            type: cls.type,
+        });
+        setIsModalOpen(true);
+    }, []);
     
     const requestDelete = (classId) => setDeleteModal({ isOpen: true, classId });
     const confirmDelete = () => {
@@ -70,7 +101,7 @@ export default function TeacherDashboard() {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 onSave={handleSaveClass}
-                title="Nova Aula"
+                title={editingClass ? 'Editar Aula' : 'Nova Aula'}
             >
                 <div className="space-y-6">
                     <div><label className="text-sm font-medium">Data</label><input type="date" name="date" value={classForm.date} onChange={handleFormChange} required className="w-full mt-1 p-2 border rounded-md"/></div>
@@ -97,23 +128,15 @@ export default function TeacherDashboard() {
                 <MonthNavigator displayedDate={displayedDate} onPrevious={handlePreviousMonth} onNext={handleNextMonth} />
                 
                 <div className="space-y-4">
-                    {filteredClasses.length > 0 ? filteredClasses.map(cls => {
-                        const classDate = new Date(cls.date).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
-                        const classTime = new Date(cls.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                        return (
-                            <div key={cls.id} className="bg-white p-5 rounded-lg shadow-sm">
-                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
-                                    <div className="text-left mr-auto">
-                                        <p className="font-bold text-lg text-black capitalize">{cls.type}: {classDate} - {classTime}</p>
-                                        <p className="text-sm font-semibold text-gray-700">Check-ins: {cls.checkedInStudents.length} / {cls.maxStudents}</p>
-                                    </div>
-                                    <button onClick={() => requestDelete(cls.id)} className="mt-2 md:mt-0 px-4 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full hover:bg-red-200">
-                                        Excluir
-                                    </button>
-                                </div>
-                            </div>
-                        );
-                    }) : <p className="text-center text-gray-500 bg-white p-8 rounded-lg">Nenhuma aula sua marcada para este mês.</p>}
+                    {filteredClasses.length > 0 ? filteredClasses.map(cls => (
+                        <ClassItem
+                            key={cls.id}
+                            cls={cls}
+                            allUsers={users}
+                            onDeleteClass={requestDelete}
+                            onEditClass={openModalForEdit} // Passando a nova função de edição
+                        />
+                    )) : <p className="text-center text-gray-500 bg-white p-8 rounded-lg">Nenhuma aula sua marcada para este mês.</p>}
                 </div>
             </div>
         </>
