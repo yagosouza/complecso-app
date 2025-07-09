@@ -1,3 +1,4 @@
+// src/components/ComplecsoApp.js
 import React from 'react';
 import { LogOut, UserCog, RotateCcw } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
@@ -20,7 +21,7 @@ export default function ComplecsoApp() {
   return (
     <div className='h-screen bg-gray-100 flex flex-col font-sans'>
       {/* HEADER FIXO NO TOPO */}
-      <header className='flex-shrink-0 bg-white shadow-md z-20'>
+      <header className='flex-shrink-0 bg-white shadow-md z-20 pt-[env(safe-area-inset-top)]'>
         <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center'>
             <h1 className='text-2xl font-bold text-black cursor-pointer' onClick={() => setView(currentUser.role === 'admin' ? 'users' : 'dashboard')}>
                 Complecso
@@ -41,7 +42,8 @@ export default function ComplecsoApp() {
       </header>
 
       {/* ÁREA DE CONTEÚDO PRINCIPAL (COM SCROLL) */}
-      <main className='flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8'>
+      {/* Ajustado o padding-bottom para dar mais espaço acima da BottomNavbar */}
+      <main className='flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-28 md:pb-8'>
         <div className='max-w-7xl mx-auto'>
             {view === 'profile' 
                 ? <ProfilePage onBack={() => setView(currentUser.role === 'admin' ? 'users' : 'dashboard')} />

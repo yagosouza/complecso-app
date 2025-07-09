@@ -23,12 +23,12 @@ export default function UserManagementView() {
         });
         setIsModalOpen(true);
     }, [activeTab]);
-    
+
     const openModalForEdit = useCallback((user) => {
         setEditingUser({ ...user });
         setIsModalOpen(true);
     }, []);
-    
+
     const handleFormChange = (e) => {
         const { name, value, type, checked } = e.target;
         setEditingUser(currentUser => {
@@ -42,12 +42,12 @@ export default function UserManagementView() {
             return updatedUser;
         });
     };
-    
+
     const handleSave = () => {
         if (!editingUser) return;
         const { id, ...formData } = editingUser;
         const userData = { ...formData, phone: formData.phone.replace(/\D/g, '') };
-    
+
         if (id) {
             setUsers(currentUsers => currentUsers.map(u => u.id === id ? userData : u));
         } else {
@@ -84,48 +84,44 @@ export default function UserManagementView() {
                             <div><label className="text-sm font-medium">Data de Nascimento</label><input type="date" name="birthDate" value={editingUser.birthDate} onChange={handleFormChange} className="w-full mt-1 p-2 border rounded-md"/></div>
                             <div><label className="text-sm font-medium">Função</label><select name="role" value={editingUser.role} onChange={handleFormChange} className="w-full mt-1 p-2 border rounded-md bg-white"><option value="student">Aluno</option><option value="teacher">Professor</option></select></div>
                         </div>
-                        
+
                         <div><label className="font-semibold">Status</label><select name="status" value={editingUser.status} onChange={handleFormChange} className="w-full mt-1 p-2 border rounded-md bg-white"><option value="active">Ativo</option><option value="inactive">Inativo</option></select></div>
-                        
+
                         {editingUser.role === 'student' && (
                             <>
                                 <div className="p-4 border rounded-md space-y-4">
-                                    <h4 className="font-semibold">Dados de Aluno</h4>
-                                    <div>
-                                        <label className="font-semibold">Modalidades:</label>
-                                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
-                                            {CLASS_TYPES.map(type => (
-                                                <label key={type} className="flex items-center gap-2">
-                                                    <input 
-                                                        type="checkbox" 
-                                                        name="enrolledIn" 
-                                                        value={type} 
-                                                        checked={editingUser.enrolledIn?.includes(type)} 
-                                                        onChange={handleFormChange}
-                                                    />
-                                                    {type}
-                                                </label>
-                                            ))}
-                                        </div>
+                                    <label className="font-semibold">Modalidades:</label>
+                                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
+                                        {CLASS_TYPES.map(type => (
+                                            <label key={type} className="flex items-center gap-2">
+                                                <input
+                                                    type="checkbox"
+                                                    name="enrolledIn"
+                                                    value={type}
+                                                    checked={editingUser.enrolledIn?.includes(type)}
+                                                    onChange={handleFormChange}
+                                                />
+                                                {type}
+                                            </label>
+                                        ))}
                                     </div>
                                 </div>
                                 {editingUser.id && <CreditBatchManager userId={editingUser.id} />}
                             </>
                         )}
-                        
+
                         {editingUser.role === 'teacher' && (
                              <div className="p-4 border rounded-md space-y-4">
-                                <h4 className="font-semibold">Dados de Professor</h4>
                                 <label className="font-semibold">Especialidades:</label>
                                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 mt-1">{CLASS_TYPES.map(type => (<label key={type} className="flex items-center gap-2"><input type="checkbox" name="specialties" value={type} checked={editingUser.specialties?.includes(type)} onChange={handleFormChange}/>{type}</label>))}</div>
                              </div>
                         )}
-                        
+
                         {editingUser.id && <button type="button" onClick={() => handleResetPassword(editingUser.id)} className="text-sm text-blue-600 hover:underline mt-2">Redefinir Senha</button>}
                     </div>
                 )}
             </FullScreenFormModal>
-            
+
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                 <div className="relative w-full sm:flex-grow">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
@@ -136,7 +132,7 @@ export default function UserManagementView() {
                     Novo {activeTab === 'students' ? 'Aluno' : 'Professor'}
                 </button>
             </div>
-            
+
             <div>
                 <div className="border-b border-gray-200">
                     <nav className="-mb-px flex gap-6" aria-label="Tabs">
@@ -155,7 +151,7 @@ export default function UserManagementView() {
                     </nav>
                 </div>
             </div>
-            
+
             <div>
                 {activeTab === 'students' && <UserList title="Alunos" users={students} onEditClick={openModalForEdit} />}
                 {activeTab === 'teachers' && <UserList title="Professores" users={teachers} onEditClick={openModalForEdit} />}
