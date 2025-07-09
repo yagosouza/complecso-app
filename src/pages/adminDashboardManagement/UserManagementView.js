@@ -109,7 +109,7 @@ export default function UserManagementView() {
                                         </div>
                                     </div>
                                 </div>
-                                <CreditBatchManager userId={editingUser.id} />
+                                {editingUser.id && <CreditBatchManager userId={editingUser.id} />}
                             </>
                         )}
                         
