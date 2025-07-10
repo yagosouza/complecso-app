@@ -85,6 +85,19 @@ const ClassForm = ({
         </div>
       </div>
 
+      {/* NOVO CAMPO DE DESCRIÇÃO */}
+      <div>
+        <label className="text-sm font-medium">Descrição da Aula</label>
+        <textarea
+          name="description"
+          value={classForm.description || ''}
+          onChange={handleFormChange}
+          rows="3"
+          placeholder="Ex: Foco em bandeja, jogo-treino, etc."
+          className="mt-1 block w-full p-2 border rounded-md"
+        />
+      </div>
+
       {!isEditing && (
         <div className="p-4 border rounded-md space-y-4 mt-6">
           <label className="flex items-center gap-2">

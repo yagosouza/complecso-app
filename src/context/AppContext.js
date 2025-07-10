@@ -1,16 +1,16 @@
 // src/context/AppContext.js
 import React, { createContext, useContext, useMemo, useCallback, useState } from 'react';
 import useStickyState from '../hooks/useStickyState';
-import { initialUsers, initialClasses, INITIAL_MODALITIES, INITIAL_CATEGORIES, INITIAL_PLANS } from '../constants/mockData';
+import { initialUsers, initialClasses, initialModalities, initialCategories, initialPlans } from '../constants/mockData';
 
 const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
     const [users, setUsers] = useStickyState(initialUsers, 'users');
     const [classes, setClasses] = useStickyState(initialClasses, 'classes');
-    const [modalities, setModalities] = useStickyState(INITIAL_MODALITIES, 'modalities');
-    const [categories, setCategories] = useStickyState(INITIAL_CATEGORIES, 'categories');
-    const [plans, setPlans] = useStickyState(INITIAL_PLANS, 'plans');
+    const [modalities, setModalities] = useStickyState(initialModalities, 'modalities');
+    const [categories, setCategories] = useStickyState(initialCategories, 'categories');
+    const [plans, setPlans] = useStickyState(initialPlans, 'plans');
     const [currentUser, setCurrentUser] = useStickyState(null, 'currentUser');
     const [cancellationDeadlineHours, setCancellationDeadlineHours] = useStickyState(24, 'cancellationDeadline');
     const [view, setView] = useState('dashboard');

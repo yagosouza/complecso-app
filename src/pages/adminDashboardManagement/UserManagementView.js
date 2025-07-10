@@ -1,5 +1,5 @@
 // src/pages/adminDashboardManagement/UserManagementView.js
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Search, PlusCircle } from 'lucide-react';
 import UserList from '../../components/ui/UserList';
 import FullScreenFormModal from '../../components/modals/FullScreenFormModal';
@@ -14,65 +14,83 @@ export default function UserManagementView() {
     const [editingUser, setEditingUser] = useState(null);
     const [activeTab, setActiveTab] = useState('students');
 
-    // Efeito para manter os dados do formulário sincronizados com o estado global
-    useEffect(() => {
-        if (editingUser && editingUser.id) {
-            const freshUserData = users.find(u => u.id === editingUser.id);
-            if (freshUserData) {
-                // Previne a perda de dados ao comparar string JSON para evitar re-renderizações desnecessárias
-                if (JSON.stringify(freshUserData) !== JSON.stringify(editingUser)) {
-                    setEditingUser(freshUserData);
-                }
-            }
-        }
-    }, [users, editingUser]);
-
     const handleSearchTermChange = useCallback((e) => setSearchTerm(e.target.value), []);
 
     const openModalForNew = useCallback(() => {
+        // Lógica para pré-selecionar a modalidade
+        const defaultEnrolledIn = modalities.length === 1 ? modalities : [];
+
         setEditingUser({
             id: null, name: '', username: '', role: activeTab === 'students' ? 'student' : 'teacher', 
-            status: 'active', phone: '', email: '', birthDate: '', enrolledIn: [], specialties: [], 
-            classPacks: [], // Garante que a propriedade exista para novos usuários
+            status: 'active', phone: '', email: '', birthDate: '', 
+            // A modalidade padrão é aplicada aqui
+            enrolledIn: defaultEnrolledIn, 
+            specialties: [], 
+            classPacks: [],
             categories: []
         });
         setIsModalOpen(true);
-    }, [activeTab]);
+    }, [activeTab, modalities]);
 
     const openModalForEdit = useCallback((user) => {
         setEditingUser({
             ...user,
-            classPacks: user.classPacks || [], // Garante que a propriedade exista ao editar
+            classPacks: user.classPacks || [],
+            categories: user.categories || [],
+            enrolledIn: user.enrolledIn || [],
+            specialties: user.specialties || []
         });
         setIsModalOpen(true);
     }, []);
-
+    
     const handleFormChange = (e) => {
         const { name, value, type, checked } = e.target;
+    
         setEditingUser(currentUser => {
-            const updatedUser = { ...currentUser };
-            if (type === 'checkbox') {
-                 const currentArray = updatedUser[name] || [];
-                 if (name === "categories" || name === "enrolledIn" || name === "specialties") {
-                    updatedUser[name] = checked ? [...currentArray, value] : currentArray.filter(v => v !== value);
-                 }
-            } else {
-                updatedUser[name] = value;
+            if (!currentUser) return null;
+    
+            if (name === "categories" || name === "enrolledIn" || name === "specialties") {
+                const currentArray = currentUser[name] || [];
+                let newArray;
+    
+                if (checked) {
+                    newArray = [...currentArray, value];
+                } else {
+                    newArray = currentArray.filter(item => item !== value);
+                }
+    
+                return { ...currentUser, [name]: newArray };
             }
-            return updatedUser;
+    
+            return {
+                ...currentUser,
+                [name]: type === 'checkbox' ? checked : value
+            };
         });
     };
+    
 
     const handleSave = () => {
         if (!editingUser) return;
-        const { id, ...formData } = editingUser;
-        const userData = { ...formData, phone: formData.phone.replace(/\D/g, '') };
-
-        if (id) {
-            setUsers(currentUsers => currentUsers.map(u => u.id === id ? userData : u));
+    
+        const finalUserData = {
+            ...editingUser,
+            phone: editingUser.phone.replace(/\D/g, ''),
+        };
+    
+        if (finalUserData.id) {
+            setUsers(currentUsers =>
+                currentUsers.map(u => (u.id === finalUserData.id ? finalUserData : u))
+            );
         } else {
-            handleCreateUser({ ...userData, password: 'password', checkedInClassIds: [], lateCancellations: [] });
+            handleCreateUser({
+                ...finalUserData,
+                password: 'password',
+                checkedInClassIds: [],
+                lateCancellations: []
+            });
         }
+    
         setIsModalOpen(false);
         setEditingUser(null);
     };
@@ -100,7 +118,7 @@ export default function UserManagementView() {
                             <div><label className="text-sm font-medium">Nome</label><input type="text" name="name" value={editingUser.name} onChange={handleFormChange} className="w-full mt-1 p-2 border rounded-md"/></div>
                             <div><label className="text-sm font-medium">Username</label><input type="text" name="username" value={editingUser.username} onChange={handleFormChange} className="w-full mt-1 p-2 border rounded-md"/></div>
                             <div><label className="text-sm font-medium">Email</label><input type="email" name="email" value={editingUser.email} onChange={handleFormChange} className="w-full mt-1 p-2 border rounded-md"/></div>
-                            <div><label className="text-sm font-medium">Telefone/Whats</label><input type="tel" name="phone" value={editingUser.phone} onChange={e => setEditingUser({...editingUser, phone: maskPhone(e.target.value)})} className="w-full mt-1 p-2 border rounded-md"/></div>
+                            <div><label className="text-sm font-medium">Telefone/Whats</label><input type="tel" name="phone" value={editingUser.phone || ''} onChange={e => setEditingUser({...editingUser, phone: maskPhone(e.target.value)})} className="w-full mt-1 p-2 border rounded-md"/></div>
                             <div><label className="text-sm font-medium">Data de Nascimento</label><input type="date" name="birthDate" value={editingUser.birthDate} onChange={handleFormChange} className="w-full mt-1 p-2 border rounded-md"/></div>
                             <div><label className="text-sm font-medium">Função</label><select name="role" value={editingUser.role} onChange={handleFormChange} className="w-full mt-1 p-2 border rounded-md bg-white"><option value="student">Aluno</option><option value="teacher">Professor</option></select></div>
                         </div>

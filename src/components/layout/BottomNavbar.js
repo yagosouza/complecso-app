@@ -1,5 +1,6 @@
+// src/components/layout/BottomNavbar.js
 import React from 'react';
-import { Users, CalendarDays, Settings, Home } from 'lucide-react';
+import { Users, CalendarDays, Home, UserCog, History  } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 
 export default function BottomNavbar() {
@@ -9,15 +10,19 @@ export default function BottomNavbar() {
 
     const navItems = {
         admin: [
+            // Itens simplificados para o admin no mobile
+            { id: 'home', label: 'Início', icon: Home },
             { id: 'users', label: 'Usuários', icon: Users },
             { id: 'classes', label: 'Aulas', icon: CalendarDays },
-            { id: 'settings', label: 'Ajustes', icon: Settings },
         ],
         teacher: [
             { id: 'dashboard', label: 'Minhas Aulas', icon: CalendarDays },
+            { id: 'profile', label: 'Perfil', icon: UserCog },
         ],
         student: [
             { id: 'dashboard', label: 'Aulas', icon: Home },
+            { id: 'history', label: 'Histórico', icon: History }, // Adicionado
+            { id: 'profile', label: 'Perfil', icon: UserCog },
         ],
     };
 

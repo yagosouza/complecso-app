@@ -8,21 +8,21 @@ import FullScreenFormModal from '../../components/modals/FullScreenFormModal';
 import ClassForm from '../../components/forms/ClassForm';
 import { useAppContext } from '../../context/AppContext';
 
-const initialFormState = { date: '', time: '', maxStudents: 10, teacherId: '', type: '', categories: [] };
+const initialFormState = (modalities) => { return { date: '', time: '', maxStudents: 10, teacherId: '', type: modalities.length === 1 ? modalities[0] : '', categories: [], description: '' }; };
 const initialRecurrenceState = { isRecurring: false, days: [], occurrences: 4 };
 
 export default function ClassManagementView() {
-    const { classes, setClasses, users, handleCreateClass, handleDeleteClass } = useAppContext();
+    const { classes, setClasses, users, modalities, handleCreateClass, handleDeleteClass } = useAppContext();
 
     const [displayedDate, setDisplayedDate] = useState(new Date());
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingClass, setEditingClass] = useState(null);
-    const [classForm, setClassForm] = useState(initialFormState);
+    const [classForm, setClassForm] = useState(initialFormState(modalities));
     const [recurrence, setRecurrence] = useState(initialRecurrenceState);
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, classId: null });
 
     const handleSave = () => {
-        const { date, time, maxStudents, teacherId, type, categories: classCategories } = classForm;
+        const { date, time, maxStudents, teacherId, type, categories: classCategories, description } = classForm; // Adicione description
         if (!date || !time || !teacherId || !type || classCategories.length === 0) {
             alert("Por favor, preencha todos os campos, incluindo ao menos uma categoria.");
             return;
@@ -32,7 +32,7 @@ export default function ClassManagementView() {
             const [year, month, day] = date.split('-');
             const [hour, minute] = time.split(':');
             const classDate = new Date(year, parseInt(month) - 1, day, hour, minute);
-            setClasses(prev => prev.map(c => c.id === editingClass.id ? { ...c, date: classDate, maxStudents: parseInt(maxStudents), teacherId: parseInt(teacherId), type, categories: classCategories } : c));
+            setClasses(prev => prev.map(c => c.id === editingClass.id ? { ...c, date: classDate, maxStudents: parseInt(maxStudents), teacherId: parseInt(teacherId), type, categories: classCategories, description } : c)); 
         } else if (recurrence.isRecurring && recurrence.days.length > 0) {
             let classesToCreate = [];
             let occurrencesFound = 0;
@@ -48,6 +48,7 @@ export default function ClassManagementView() {
                         maxStudents: parseInt(maxStudents),
                         type,
                         categories: classCategories,
+                        description
                     };
                     classesToCreate.push({ ...newClassData, id: Date.now() + occurrencesFound, teacherId: parseInt(teacherId), checkedInStudents: [], lateCancellations: [] });
                     occurrencesFound++;
@@ -59,7 +60,7 @@ export default function ClassManagementView() {
             const [year, month, day] = date.split('-');
             const [hour, minute] = time.split(':');
             const classDate = new Date(year, parseInt(month) - 1, day, hour, minute);
-            handleCreateClass({ date: classDate, maxStudents: parseInt(maxStudents), type, categories: classCategories }, parseInt(teacherId));
+            handleCreateClass({ date: classDate, maxStudents: parseInt(maxStudents), type, categories: classCategories, description }, parseInt(teacherId)); // Adicione description
         }
 
         setIsModalOpen(false);
@@ -67,7 +68,7 @@ export default function ClassManagementView() {
 
     const openModalForNew = () => {
         setEditingClass(null);
-        setClassForm(initialFormState);
+        setClassForm(initialFormState(modalities));
         setRecurrence(initialRecurrenceState);
         setIsModalOpen(true);
     };
@@ -81,7 +82,8 @@ export default function ClassManagementView() {
             maxStudents: cls.maxStudents,
             teacherId: cls.teacherId,
             type: cls.type,
-            categories: cls.categories
+            categories: cls.categories,
+            description: cls.description || ''
         });
         setRecurrence({ ...initialRecurrenceState, isRecurring: false });
         setIsModalOpen(true);

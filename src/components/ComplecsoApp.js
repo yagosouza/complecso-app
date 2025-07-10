@@ -1,60 +1,52 @@
 // src/components/ComplecsoApp.js
-import React from 'react';
-import { LogOut, UserCog, RotateCcw } from 'lucide-react';
+import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 
 import ProfilePage from '../pages/ProfilePage';
 import MainContent from '../MainContent';
-import BottomNavbar from './layout/BottomNavbar';
 import InstallPWA from './InstallPWA';
+import Sidebar from './layout/Sidebar';
+import Header from './layout/Header';
+import BottomNavbar from './layout/BottomNavbar';
 
 export default function ComplecsoApp() {
-  const { currentUser, handleLogout, view, setView } = useAppContext();
+  const { currentUser, view, setView } = useAppContext();
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
 
-  const handleResetData = () => {
-    if (window.confirm('Isso irá limpar todos os dados salvos e recarregar a aplicação com os dados iniciais. Deseja continuar?')) {
-      localStorage.clear();
-      window.location.reload();
+  // Função simplificada para voltar à tela inicial de cada perfil
+  const goHome = () => {
+    switch (currentUser.role) {
+      case 'admin':
+        setView('home');
+        break;
+      case 'student':
+      case 'teacher':
+        setView('dashboard');
+        break;
+      default:
+        break;
     }
   };
 
   return (
-    <div className='h-screen bg-gray-100 flex flex-col font-sans'>
-      {/* HEADER FIXO NO TOPO */}
-      <header className='flex-shrink-0 bg-white shadow-md z-20 pt-[env(safe-area-inset-top)]'>
-        <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center'>
-            <h1 className='text-2xl font-bold text-black cursor-pointer' onClick={() => setView(currentUser.role === 'admin' ? 'users' : 'dashboard')}>
-                Complecso
-            </h1>
-            <div className='flex items-center gap-2 md:gap-4'>
-                <button onClick={handleResetData} className='p-2 rounded-full hover:bg-gray-200' title='Resetar dados da aplicação'>
-                  <RotateCcw className='h-5 w-5 text-red-500'/>
-                </button>
-                <button onClick={() => setView('profile')} className='p-2 rounded-full hover:bg-gray-200' title="Meu Perfil">
-                    <UserCog className='h-5 w-5 text-gray-600'/>
-                </button>
-                <button onClick={handleLogout} className='p-2 rounded-full hover:bg-gray-200' title="Sair">
-                    <LogOut className='h-5 w-5 text-gray-600' />
-                    <span className='hidden sm:inline ml-2 text-sm'>Sair</span>
-                </button>
-            </div>
-        </div>
-      </header>
+    <div className='h-screen bg-gray-50 flex font-sans'>
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* ÁREA DE CONTEÚDO PRINCIPAL (COM SCROLL) */}
-      {/* Ajustado o padding-bottom para dar mais espaço acima da BottomNavbar */}
-      <main className='flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-28 md:pb-8'>
-        <div className='max-w-7xl mx-auto'>
-            {view === 'profile' 
-                ? <ProfilePage onBack={() => setView(currentUser.role === 'admin' ? 'users' : 'dashboard')} />
-                : <MainContent />
-            }
-        </div>
-      </main>
+      <div className="flex-1 flex flex-col h-screen">
+        <Header onMenuClick={() => setSidebarOpen(true)} />
 
-      {/* NAVBAR E PWA (MOBILE) */}
-      <BottomNavbar />
-      <InstallPWA />
+        <main className='flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-28 md:pb-4'>
+          <div className='max-w-7xl mx-auto'>
+              {view === 'profile' 
+                  ? <ProfilePage onBack={goHome} />
+                  : <MainContent />
+              }
+          </div>
+        </main>
+
+        <BottomNavbar />
+        <InstallPWA />
+      </div>
     </div>
   );
 }

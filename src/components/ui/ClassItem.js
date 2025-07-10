@@ -1,6 +1,6 @@
 // src/components/ui/ClassItem.js
 import React from 'react';
-import { Repeat, X, UserCheck, UserX, Award } from 'lucide-react';
+import { Repeat, X, UserCheck, UserX, Award, Info } from 'lucide-react';
 
 const ClassItem = React.memo(({ cls, allUsers, onDeleteClass, onEditClass, studentView = false, actionButton = null }) => {
     const teacher = allUsers.find(u => u.id === cls.teacherId);
@@ -21,6 +21,13 @@ const ClassItem = React.memo(({ cls, allUsers, onDeleteClass, onEditClass, stude
                     <p className="font-bold text-black">{cls.type}: {new Date(cls.date).toLocaleDateString('pt-BR')} - {new Date(cls.date).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</p>
                     <p className="text-sm text-gray-600">Prof: {teacher?.name || 'N/A'}</p>
                     <p className="text-sm text-gray-600">Alunos: {cls.checkedInStudents.length}/{cls.maxStudents}</p>
+                    {/* MOSTRAR DESCRIÇÃO SE EXISTIR */}
+                    {cls.description && (
+                        <div className="mt-2 flex items-start text-sm text-gray-500">
+                            <Info className="w-4 h-4 mr-2 mt-1 flex-shrink-0" />
+                            <p>{cls.description}</p>
+                        </div>
+                    )}
                     <div className="flex items-center mt-1 flex-wrap">
                         {cls.categories.map(cat => (
                             <span key={cat} className="text-xs font-semibold mr-2 mb-1 px-2 py-1 bg-yellow-200 text-yellow-800 rounded-full flex items-center">

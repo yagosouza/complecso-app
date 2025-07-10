@@ -1,6 +1,6 @@
 // src/pages/StudentDashboard.js
 import React, { useState, useMemo } from 'react';
-import { CheckCircle2, History, Award } from 'lucide-react';
+import { CheckCircle2, Award } from 'lucide-react'; // Removido 'History'
 import { useAppContext } from '../context/AppContext';
 import { calculateTotalClasses } from '../utils/classHelpers';
 import DayView from '../components/ui/DayView';
@@ -12,10 +12,11 @@ export default function StudentDashboard() {
 
     const [displayedDate, setDisplayedDate] = useState(new Date());
     const [modalState, setModalState] = useState({ isOpen: false, classId: null });
-    const [showHistory, setShowHistory] = useState(false);
+    // O estado 'showHistory' foi removido
 
     const student = useMemo(() => users.find(u => u.id === currentUser.id), [currentUser.id, users]);
 
+    // ... (funções handleCheckIn, performNormalCancellation, etc. permanecem as mesmas)
     const handleCheckIn = (classId) => {
         const cls = classes.find(c => c.id === classId);
         if (cls.checkedInStudents.includes(student.id)) return alert("Você já fez check-in nesta aula.");
@@ -128,14 +129,7 @@ export default function StudentDashboard() {
             .sort((a, b) => new Date(a.date) - new Date(b.date));
     }, [classes, displayedDate, student]);
 
-    const classHistory = useMemo(() => {
-        if (!student) return [];
-        return student.checkedInClassIds
-            .map(id => classes.find(c => c.id === id))
-            .filter(c => c && new Date(c.date) < new Date())
-            .sort((a,b) => new Date(b.date) - new Date(a.date));
-    }, [classes, student]);
-
+    // O useMemo 'classHistory' foi movido para ClassHistoryView.js
 
     if (!student) {
         return <div className="text-center p-8">Carregando dados do aluno...</div>;
@@ -155,7 +149,7 @@ export default function StudentDashboard() {
             </ConfirmModal>
 
             <div className="space-y-6">
-                 <div className="bg-white p-6 rounded-xl shadow-md">
+                <div className="bg-white p-6 rounded-xl shadow-md">
                     <h2 className="text-2xl font-bold text-black mb-4">Olá, {student.name}!</h2>
                     <div className="flex items-center mt-1 flex-wrap mb-4">
                         {student.categories?.map(cat => (
@@ -165,7 +159,7 @@ export default function StudentDashboard() {
                         ))}
                     </div>
                     <h3 className="text-lg font-semibold text-gray-800 mb-2">Suas Aulas</h3>
-                     <div className="space-y-2">
+                    <div className="space-y-2">
                         {totalClasses === Infinity ? (
                              <p className="text-center text-green-600 font-semibold py-4">Você possui aulas ilimitadas!</p>
                         ) : activeClassPacks.length > 0 ? (
@@ -184,56 +178,41 @@ export default function StudentDashboard() {
                     </div>
                 </div>
                 <div>
-                    <div className="flex justify-between items-center mb-4">
-                        <DayView displayedDate={displayedDate} setDisplayedDate={setDisplayedDate} />
-                        <button onClick={() => setShowHistory(!showHistory)} className="p-2 rounded-full hover:bg-gray-100 ml-4" title={showHistory ? 'Ver aulas do dia' : 'Ver histórico de aulas'}>
-                            <History className="h-6 w-6 text-gray-700" />
-                        </button>
+                    {/* Botão de histórico foi removido daqui */}
+                    <DayView displayedDate={displayedDate} setDisplayedDate={setDisplayedDate} />
+
+                    <div className="space-y-4 mt-4">
+                        {filteredClasses.length > 0 ? filteredClasses.map(cls => {
+                            const isFull = cls.checkedInStudents.length >= cls.maxStudents;
+                            const isCheckedIn = student.checkedInClassIds.includes(cls.id);
+                            const isPast = new Date(cls.date) < new Date();
+
+                            let buttonLabel = 'Fazer Check-in';
+                            if (!hasClasses) buttonLabel = 'Sem aulas';
+                            else if (isFull) buttonLabel = 'Turma Cheia';
+
+                            return (
+                                <ClassItem
+                                    key={cls.id}
+                                    cls={cls}
+                                    allUsers={users}
+                                    studentView={true}
+                                    actionButton={
+                                        isCheckedIn ? (
+                                            <button onClick={() => handleCancelCheckInRequest(cls.id)} disabled={isPast} className="w-full md:w-auto px-6 py-2 text-sm font-semibold text-red-700 bg-red-100 rounded-full hover:bg-red-200 disabled:bg-gray-200 disabled:text-gray-500">
+                                                Cancelar Check-in
+                                            </button>
+                                        ) : (
+                                            <button onClick={() => handleCheckIn(cls.id)} disabled={isFull || !hasClasses || isPast} className="w-full md:w-auto px-6 py-2 text-sm font-bold text-black bg-[#ddfb3b] rounded-full hover:opacity-90 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                                                <CheckCircle2 className="h-5 w-5" />
+                                                {buttonLabel}
+                                            </button>
+                                        )
+                                    }
+                                />
+                            );
+                        }) : <p className="text-center text-gray-500 bg-white p-8 rounded-lg mt-4">Nenhuma aula encontrada para este dia.</p>}
                     </div>
-
-                    {showHistory ? (
-                        <div>
-                             <h3 className="text-xl font-bold mb-4 text-center">Histórico de Aulas</h3>
-                             <div className="space-y-4">
-                                {classHistory.length > 0 ? classHistory.map(cls => (
-                                    <ClassItem key={cls.id} cls={cls} allUsers={users} studentView={true}/>
-                                )) : <p className="text-center text-gray-500 bg-white p-8 rounded-lg">Nenhum histórico de aulas.</p>}
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {filteredClasses.length > 0 ? filteredClasses.map(cls => {
-                                const isFull = cls.checkedInStudents.length >= cls.maxStudents;
-                                const isCheckedIn = student.checkedInClassIds.includes(cls.id);
-                                const isPast = new Date(cls.date) < new Date();
-
-                                let buttonLabel = 'Fazer Check-in';
-                                if (!hasClasses) buttonLabel = 'Sem aulas';
-                                else if (isFull) buttonLabel = 'Turma Cheia';
-
-                                return (
-                                    <ClassItem
-                                        key={cls.id}
-                                        cls={cls}
-                                        allUsers={users}
-                                        studentView={true}
-                                        actionButton={
-                                            isCheckedIn ? (
-                                                <button onClick={() => handleCancelCheckInRequest(cls.id)} disabled={isPast} className="w-full md:w-auto px-6 py-2 text-sm font-semibold text-red-700 bg-red-100 rounded-full hover:bg-red-200 disabled:bg-gray-200 disabled:text-gray-500">
-                                                    Cancelar Check-in
-                                                </button>
-                                            ) : (
-                                                <button onClick={() => handleCheckIn(cls.id)} disabled={isFull || !hasClasses || isPast} className="w-full md:w-auto px-6 py-2 text-sm font-bold text-black bg-[#ddfb3b] rounded-full hover:opacity-90 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                                                    <CheckCircle2 className="h-5 w-5" />
-                                                    {buttonLabel}
-                                                </button>
-                                            )
-                                        }
-                                    />
-                                );
-                            }) : <p className="text-center text-gray-500 bg-white p-8 rounded-lg">Nenhuma aula encontrada para este dia.</p>}
-                        </div>
-                    )}
                 </div>
             </div>
         </>

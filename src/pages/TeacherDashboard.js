@@ -8,15 +8,23 @@ import ClassItem from '../components/ui/ClassItem';
 import ClassForm from '../components/forms/ClassForm';
 import { useAppContext } from '../context/AppContext';
 
-const initialFormState = { date: '', time: '', maxStudents: 10, type: '', categories: [] };
+const initialFormState = (modalities) => ({
+    date: '',
+    time: '',
+    maxStudents: 10,
+    // Se só houver uma modalidade, ela já vem selecionada
+    type: modalities.length === 1 ? modalities[0] : '',
+    categories: [],
+    description: ''
+});
 const initialRecurrenceState = { isRecurring: false, days: [], occurrences: 4 };
 
 export default function TeacherDashboard() {
-    const { currentUser, classes, setClasses, users, handleCreateClass, handleDeleteClass } = useAppContext();
+    const { currentUser, classes, setClasses, users, modalities, handleCreateClass, handleDeleteClass } = useAppContext();
     
     const [displayedDate, setDisplayedDate] = useState(new Date());
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [classForm, setClassForm] = useState(initialFormState);
+    const [classForm, setClassForm] = useState(initialFormState(modalities));
     const [editingClass, setEditingClass] = useState(null);
     const [recurrence, setRecurrence] = useState(initialRecurrenceState);
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, classId: null });
@@ -31,7 +39,7 @@ export default function TeacherDashboard() {
     }, [classes, displayedDate, currentUser.id]);
     
     const handleSaveClass = () => {
-        const { date, time, maxStudents, type, categories: classCategories } = classForm;
+        const { date, time, maxStudents, type, categories: classCategories, description } = classForm; 
         if (!date || !time || !type || classCategories.length === 0) {
             alert("Por favor, preencha todos os campos, incluindo ao menos uma categoria.");
             return;
@@ -45,7 +53,7 @@ export default function TeacherDashboard() {
             const classDate = new Date(year, parseInt(month) - 1, day, hour, minute);
             setClasses(prevClasses => prevClasses.map(c => 
                 c.id === editingClass.id 
-                ? { ...editingClass, date: classDate, maxStudents: parseInt(maxStudents), type, categories: classCategories, teacherId } 
+                ? { ...editingClass, date: classDate, maxStudents: parseInt(maxStudents), type, categories: classCategories, teacherId, description }
                 : c
             ));
         } else if (recurrence.isRecurring && recurrence.days.length > 0) {
@@ -73,7 +81,7 @@ export default function TeacherDashboard() {
             const [year, month, day] = date.split('-');
             const [hour, minute] = time.split(':');
             const classDate = new Date(year, parseInt(month) - 1, day, hour, minute);
-            const classData = { date: classDate, maxStudents: parseInt(maxStudents), type, categories: classCategories };
+            const classData = { date: classDate, maxStudents: parseInt(maxStudents), type, categories: classCategories, description };
             handleCreateClass(classData, teacherId);
         }
         
@@ -82,7 +90,7 @@ export default function TeacherDashboard() {
     
     const openModalForNew = () => {
         setEditingClass(null);
-        setClassForm(initialFormState);
+        setClassForm(initialFormState(modalities));
         setRecurrence(initialRecurrenceState);
         setIsModalOpen(true);
     };
@@ -96,6 +104,7 @@ export default function TeacherDashboard() {
             maxStudents: cls.maxStudents,
             type: cls.type,
             categories: cls.categories,
+            description: cls.description || '',
             teacherId: cls.teacherId
         });
         setRecurrence({ ...initialRecurrenceState, isRecurring: false });

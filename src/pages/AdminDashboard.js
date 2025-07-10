@@ -4,50 +4,21 @@ import UserManagementView from './adminDashboardManagement/UserManagementView';
 import ClassManagementView from './adminDashboardManagement/ClassManagementView';
 import ModalityManagementView from './adminDashboardManagement/ModalityManagementView';
 import PlanManagementView from './adminDashboardManagement/PlanManagementView';
+import AdminHomeScreen from './adminDashboardManagement/AdminHomeScreen'; // Importe a nova tela
 import { useAppContext } from '../context/AppContext';
-import { Users, CalendarDays, Settings, Dumbbell, Receipt } from 'lucide-react';
 
 export default function AdminDashboard() {
-    const { view, setView, setCancellationDeadlineHours, cancellationDeadlineHours } = useAppContext();
-
-    const adminNavItems = [
-        { id: 'users', label: 'Usuários', icon: Users },
-        { id: 'classes', label: 'Aulas', icon: CalendarDays },
-        { id: 'modalities', label: 'Modalidades', icon: Dumbbell },
-        { id: 'plans', label: 'Planos', icon: Receipt },
-        { id: 'settings', label: 'Ajustes', icon: Settings },
-    ];
-
-    const currentView = adminNavItems.map(item => item.id).includes(view) ? view : 'users';
+    const { view, setCancellationDeadlineHours, cancellationDeadlineHours } = useAppContext();
 
     return (
         <div className="space-y-6">
-            <div className="hidden md:block border-b border-gray-200">
-                <nav className="-mb-px flex gap-8" aria-label="Tabs">
-                    {adminNavItems.map(item => (
-                         <button
-                            key={item.id}
-                            onClick={() => setView(item.id)}
-                            className={`shrink-0 flex items-center gap-2 border-b-2 px-1 pb-4 text-sm font-medium ${currentView === item.id ? 'border-black text-black' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}`}
-                         >
-                            <item.icon className="h-5 w-5" />
-                            {item.label}
-                        </button>
-                    ))}
-                </nav>
-            </div>
-
-            <div className="md:hidden">
-                <h2 className="text-2xl font-bold text-black capitalize">
-                    {adminNavItems.find(item => item.id === currentView)?.label || 'Painel do Admin'}
-                </h2>
-            </div>
-
-            {currentView === 'users' && <UserManagementView />}
-            {currentView === 'classes' && <ClassManagementView />}
-            {currentView === 'modalities' && <ModalityManagementView />}
-            {currentView === 'plans' && <PlanManagementView />}
-            {currentView === 'settings' && (
+            {/* O conteúdo renderizado agora depende do 'view' do AppContext */}
+            {view === 'home' && <AdminHomeScreen />}
+            {view === 'users' && <UserManagementView />}
+            {view === 'classes' && <ClassManagementView />}
+            {view === 'modalities' && <ModalityManagementView />}
+            {view === 'plans' && <PlanManagementView />}
+            {view === 'settings' && (
                 <div className="bg-white p-6 rounded-xl shadow-md">
                     <h2 className="text-2xl font-bold text-black mb-4">Configurações Gerais</h2>
                     <div>
