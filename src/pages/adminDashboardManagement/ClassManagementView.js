@@ -1,13 +1,15 @@
-import React, { useState, useMemo, useCallback } from 'react';
+// src/pages/adminDashboardManagement/ClassManagementView.js
+import React, { useState, useMemo } from 'react';
 import { PlusCircle } from 'lucide-react';
-import MonthNavigator from '../../components/ui/MonthNavigator';
+import DayView from '../../components/ui/DayView';
 import ClassItem from '../../components/ui/ClassItem';
 import ConfirmModal from '../../components/modals/ConfirmModal';
 import FullScreenFormModal from '../../components/modals/FullScreenFormModal';
+import ClassForm from '../../components/forms/ClassForm';
 import { useAppContext } from '../../context/AppContext';
-import { CLASS_TYPES } from '../../constants/mockData';
 
-const initialFormState = { date: '', time: '', maxStudents: 10, teacherId: '', type: '' };
+const initialFormState = { date: '', time: '', maxStudents: 10, teacherId: '', type: '', categories: [] };
+const initialRecurrenceState = { isRecurring: false, days: [], occurrences: 4 };
 
 export default function ClassManagementView() {
     const { classes, setClasses, users, handleCreateClass, handleDeleteClass } = useAppContext();
@@ -16,40 +18,57 @@ export default function ClassManagementView() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingClass, setEditingClass] = useState(null);
     const [classForm, setClassForm] = useState(initialFormState);
+    const [recurrence, setRecurrence] = useState(initialRecurrenceState);
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, classId: null });
 
-    const teachers = useMemo(() => users.filter(u => u.role === 'teacher'), [users]);
-
-    const handlePreviousMonth = () => setDisplayedDate(current => new Date(current.getFullYear(), current.getMonth() - 1, 1));
-    const handleNextMonth = () => setDisplayedDate(current => new Date(current.getFullYear(), current.getMonth() + 1, 1));
-
-    const handleFormChange = useCallback((e) => {
-        const { name, value } = e.target;
-        setClassForm(currentForm => ({ ...currentForm, [name]: value }));
-    }, []);
-
     const handleSave = () => {
-        const { date, time, maxStudents, teacherId, type } = classForm;
-        if (!date || !time || !teacherId || !type) {
-            alert("Por favor, preencha todos os campos.");
+        const { date, time, maxStudents, teacherId, type, categories: classCategories } = classForm;
+        if (!date || !time || !teacherId || !type || classCategories.length === 0) {
+            alert("Por favor, preencha todos os campos, incluindo ao menos uma categoria.");
             return;
         }
-        const [year, month, day] = date.split('-');
-        const [hour, minute] = time.split(':');
-        const classDate = new Date(year, parseInt(month) - 1, day, hour, minute);
 
         if (editingClass) {
-            setClasses(prev => prev.map(c => c.id === editingClass.id ? { ...c, date: classDate, maxStudents: parseInt(maxStudents), teacherId: parseInt(teacherId), type } : c));
+            const [year, month, day] = date.split('-');
+            const [hour, minute] = time.split(':');
+            const classDate = new Date(year, parseInt(month) - 1, day, hour, minute);
+            setClasses(prev => prev.map(c => c.id === editingClass.id ? { ...c, date: classDate, maxStudents: parseInt(maxStudents), teacherId: parseInt(teacherId), type, categories: classCategories } : c));
+        } else if (recurrence.isRecurring && recurrence.days.length > 0) {
+            let classesToCreate = [];
+            let occurrencesFound = 0;
+            const startDate = new Date(`${date}T${time}`);
+            
+            for (let i = 0; occurrencesFound < recurrence.occurrences && i < 90; i++) { // Adicionado um limite de 90 dias para evitar loops infinitos
+                const newDate = new Date(startDate);
+                newDate.setDate(startDate.getDate() + i);
+
+                if (recurrence.days.includes(newDate.getDay())) {
+                    const newClassData = {
+                        date: newDate,
+                        maxStudents: parseInt(maxStudents),
+                        type,
+                        categories: classCategories,
+                    };
+                    classesToCreate.push({ ...newClassData, id: Date.now() + occurrencesFound, teacherId: parseInt(teacherId), checkedInStudents: [], lateCancellations: [] });
+                    occurrencesFound++;
+                }
+            }
+            setClasses(prev => [...prev, ...classesToCreate]);
+
         } else {
-            handleCreateClass({ date: classDate, maxStudents: parseInt(maxStudents), type }, parseInt(teacherId));
+            const [year, month, day] = date.split('-');
+            const [hour, minute] = time.split(':');
+            const classDate = new Date(year, parseInt(month) - 1, day, hour, minute);
+            handleCreateClass({ date: classDate, maxStudents: parseInt(maxStudents), type, categories: classCategories }, parseInt(teacherId));
         }
-        
+
         setIsModalOpen(false);
     };
 
     const openModalForNew = () => {
         setEditingClass(null);
         setClassForm(initialFormState);
+        setRecurrence(initialRecurrenceState);
         setIsModalOpen(true);
     };
 
@@ -61,22 +80,24 @@ export default function ClassManagementView() {
             time: d.toTimeString().substring(0, 5),
             maxStudents: cls.maxStudents,
             teacherId: cls.teacherId,
-            type: cls.type
+            type: cls.type,
+            categories: cls.categories
         });
+        setRecurrence({ ...initialRecurrenceState, isRecurring: false });
         setIsModalOpen(true);
     };
 
     const requestDelete = (classId) => setDeleteModal({ isOpen: true, classId });
-    
+
     const confirmDelete = () => {
         handleDeleteClass(deleteModal.classId);
         setDeleteModal({ isOpen: false, classId: null });
     };
 
-    const filteredAndSortedClasses = useMemo(() => 
+    const filteredAndSortedClasses = useMemo(() =>
         classes
-            .filter(c => new Date(c.date).getFullYear() === displayedDate.getFullYear() && new Date(c.date).getMonth() === displayedDate.getMonth())
-            .sort((a, b) => new Date(a.date) - new Date(b.date)), 
+            .filter(c => new Date(c.date).toDateString() === displayedDate.toDateString())
+            .sort((a, b) => new Date(a.date) - new Date(b.date)),
         [classes, displayedDate]
     );
 
@@ -92,47 +113,36 @@ export default function ClassManagementView() {
                 onSave={handleSave}
                 title={editingClass ? 'Editar Aula' : 'Nova Aula'}
             >
-                <div className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div><label className="text-sm font-medium">Data</label><input type="date" name="date" value={classForm.date} onChange={handleFormChange} required className="mt-1 block w-full p-2 border rounded-md"/></div>
-                        <div><label className="text-sm font-medium">Hora</label><input type="time" name="time" value={classForm.time} onChange={handleFormChange} required className="mt-1 block w-full p-2 border rounded-md"/></div>
-                        <div><label className="text-sm font-medium">Máx. Alunos</label><input type="number" name="maxStudents" value={classForm.maxStudents} onChange={handleFormChange} min="1" required className="mt-1 block w-full p-2 border rounded-md"/></div>
-                        <div>
-                            <label className="text-sm font-medium">Modalidade</label>
-                            <select name="type" value={classForm.type} onChange={handleFormChange} required className="mt-1 block w-full p-2 border rounded-md bg-white">
-                                <option value="" disabled>Selecione...</option>
-                                {CLASS_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="text-sm font-medium">Professor</label>
-                            <select name="teacherId" value={classForm.teacherId} onChange={handleFormChange} required className="mt-1 block w-full p-2 border rounded-md bg-white" disabled={!classForm.type}>
-                                <option value="" disabled>Selecione...</option>
-                                {teachers.filter(t => t.specialties.includes(classForm.type)).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                            </select>
-                        </div>
-                    </div>
-                </div>
+                <ClassForm 
+                    classForm={classForm}
+                    setClassForm={setClassForm}
+                    recurrence={recurrence}
+                    setRecurrence={setRecurrence}
+                    isEditing={!!editingClass}
+                    isTeacherView={false}
+                />
             </FullScreenFormModal>
 
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-black">Gerenciar Aulas</h2>
-                <button onClick={openModalForNew} className="flex-shrink-0 flex items-center gap-2 px-4 py-2 text-sm font-bold text-black bg-[#ddfb3b] rounded-full hover:opacity-90">
+                <DayView displayedDate={displayedDate} setDisplayedDate={setDisplayedDate} />
+                <button onClick={openModalForNew} className="flex-shrink-0 flex items-center gap-2 px-4 py-2 text-sm font-bold text-black bg-[#ddfb3b] rounded-full hover:opacity-90 ml-4">
                     <PlusCircle className="h-5 w-5" />Nova Aula
                 </button>
             </div>
             
-            <MonthNavigator displayedDate={displayedDate} onPrevious={handlePreviousMonth} onNext={handleNextMonth} />
-            
             <div className="space-y-4">
-                {filteredAndSortedClasses.map(cls => 
-                    <ClassItem 
-                        key={cls.id} 
-                        cls={cls} 
-                        allUsers={users} 
-                        onDeleteClass={requestDelete} 
-                        onEditClass={openModalForEdit} 
-                    />
+                {filteredAndSortedClasses.length > 0 ? (
+                    filteredAndSortedClasses.map(cls => 
+                        <ClassItem 
+                            key={cls.id} 
+                            cls={cls} 
+                            allUsers={users} 
+                            onDeleteClass={requestDelete} 
+                            onEditClass={openModalForEdit} 
+                        />
+                    )
+                ) : (
+                    <p className="text-center text-gray-500 bg-white p-8 rounded-lg">Nenhuma aula encontrada para este dia.</p>
                 )}
             </div>
         </>

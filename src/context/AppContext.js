@@ -1,13 +1,16 @@
 // src/context/AppContext.js
 import React, { createContext, useContext, useMemo, useCallback, useState } from 'react';
 import useStickyState from '../hooks/useStickyState';
-import { initialUsers, initialClasses } from '../constants/mockData';
+import { initialUsers, initialClasses, INITIAL_MODALITIES, INITIAL_CATEGORIES, INITIAL_PLANS } from '../constants/mockData';
 
 const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
     const [users, setUsers] = useStickyState(initialUsers, 'users');
     const [classes, setClasses] = useStickyState(initialClasses, 'classes');
+    const [modalities, setModalities] = useStickyState(INITIAL_MODALITIES, 'modalities');
+    const [categories, setCategories] = useStickyState(INITIAL_CATEGORIES, 'categories');
+    const [plans, setPlans] = useStickyState(INITIAL_PLANS, 'plans');
     const [currentUser, setCurrentUser] = useStickyState(null, 'currentUser');
     const [cancellationDeadlineHours, setCancellationDeadlineHours] = useStickyState(24, 'cancellationDeadline');
     const [view, setView] = useState('dashboard');
@@ -46,7 +49,7 @@ export const AppProvider = ({ children }) => {
             alert('Senha redefinida com sucesso!');
         }
     }, [setUsers]);
-    
+
     const handleCreateClass = useCallback((newClassData, teacherId) => {
         setClasses(prev => [...prev, { id: Date.now(), ...newClassData, teacherId, checkedInStudents: [], lateCancellations: [] }]);
     }, [setClasses]);
@@ -67,28 +70,22 @@ export const AppProvider = ({ children }) => {
     }, [setUsers, setClasses]);
 
     const value = useMemo(() => ({
-        users,
-        setUsers,
-        classes,
-        setClasses,
-        currentUser,
-        setCurrentUser,
-        cancellationDeadlineHours,
-        setCancellationDeadlineHours,
-        handleLogin,
-        handleLogout,
-        handleUpdatePassword,
-        handleResetPassword,
-        handleCreateClass,
-        handleCreateUser,
-        handleDeleteClass, 
-        view, 
-        setView
-    }), [
-        users, setUsers, classes, setClasses, currentUser, setCurrentUser, 
+        users, setUsers,
+        classes, setClasses,
+        modalities, setModalities,
+        categories, setCategories,
+        plans, setPlans,
+        currentUser, setCurrentUser,
         cancellationDeadlineHours, setCancellationDeadlineHours,
-        handleLogin, handleLogout, handleUpdatePassword, handleResetPassword, 
-        handleCreateClass, handleCreateUser, handleDeleteClass, 
+        handleLogin, handleLogout,
+        handleUpdatePassword, handleResetPassword,
+        handleCreateClass, handleCreateUser, handleDeleteClass,
+        view, setView
+    }), [
+        users, setUsers, classes, setClasses, modalities, setModalities, categories, setCategories, plans, setPlans,
+        currentUser, setCurrentUser, cancellationDeadlineHours, setCancellationDeadlineHours,
+        handleLogin, handleLogout, handleUpdatePassword, handleResetPassword,
+        handleCreateClass, handleCreateUser, handleDeleteClass,
         view, setView
     ]);
 
