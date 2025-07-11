@@ -1,19 +1,31 @@
+// src/pages/LoginPage.js
 import React, { useState } from 'react';
 import { Lock } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
+import { Link } from 'react-router-dom'; // Importe o Link
 
 export default function LoginPage() {
-    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const { handleLogin } = useAppContext();
+    const { handleLogin, handleResetPassword } = useAppContext();
 
     const onLoginSubmit = (e) => {
         e.preventDefault();
         setError('');
-        handleLogin(username, password, (err) => {
+        handleLogin(email, password, (err) => {
             if (err) setError(err);
         });
+    };
+
+    const onForgotPassword = () => {
+        const userEmail = prompt("Digite seu e-mail para redefinir a senha:");
+        if (userEmail) {
+            handleResetPassword(userEmail, (err, successMsg) => {
+                if (err) alert(err);
+                else alert(successMsg);
+            });
+        }
     };
 
     return (
@@ -25,9 +37,9 @@ export default function LoginPage() {
                 </div>
                 <form className="space-y-6" onSubmit={onLoginSubmit}>
                     <div>
-                        <label htmlFor="username" className="text-sm font-medium text-gray-700">Usuário</label>
+                        <label htmlFor="email" className="text-sm font-medium text-gray-700">E-mail</label>
                         <div className="mt-1">
-                            <input id="username" type="text" value={username} onChange={e => setUsername(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+                            <input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
                         </div>
                     </div>
                     <div>
@@ -41,6 +53,15 @@ export default function LoginPage() {
                         <Lock className="h-5 w-5 mr-2" />
                         Entrar
                     </button>
+                    <div className="text-sm text-center text-gray-600">
+                        <Link to="/register" className="font-medium text-black hover:underline">
+                            Criar uma conta
+                        </Link>
+                        <span className="mx-2">|</span>
+                        <button type="button" onClick={onForgotPassword} className="font-medium text-black hover:underline">
+                            Esqueceu a senha?
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
