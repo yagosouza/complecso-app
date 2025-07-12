@@ -1,5 +1,5 @@
 // src/pages/adminDashboardManagement/ClassManagementView.js
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { PlusCircle } from 'lucide-react';
 import DayView from '../../components/ui/DayView';
 import ClassItem from '../../components/ui/ClassItem';
@@ -7,73 +7,98 @@ import ConfirmModal from '../../components/modals/ConfirmModal';
 import FullScreenFormModal from '../../components/modals/FullScreenFormModal';
 import ClassForm from '../../components/forms/ClassForm';
 import { useAppContext } from '../../context/AppContext';
+import { Timestamp } from 'firebase/firestore'; // Importe o Timestamp
 
-const initialFormState = (modalities) => { return { date: '', time: '', maxStudents: 10, teacherId: '', type: modalities.length === 1 ? modalities[0] : '', categories: [], description: '' }; };
+const initialFormState = {
+    date: '', time: '', maxStudents: 10, teacherId: '', 
+    type: '', categories: [], description: ''
+};
 const initialRecurrenceState = { isRecurring: false, days: [], occurrences: 4 };
 
 export default function ClassManagementView() {
-    const { classes, setClasses, users, modalities, handleCreateClass, handleDeleteClass } = useAppContext();
+    const { classes, users, modalities, handleSaveClass, handleDeleteClass } = useAppContext();
 
     const [displayedDate, setDisplayedDate] = useState(new Date());
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingClass, setEditingClass] = useState(null);
-    const [classForm, setClassForm] = useState(initialFormState(modalities));
+    const [isSaving, setIsSaving] = useState(false);
+
+    const [classForm, setClassForm] = useState(initialFormState);
     const [recurrence, setRecurrence] = useState(initialRecurrenceState);
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, classId: null });
 
-    const handleSave = () => {
-        const { date, time, maxStudents, teacherId, type, categories: classCategories, description } = classForm; // Adicione description
-        if (!date || !time || !teacherId || !type || classCategories.length === 0) {
-            alert("Por favor, preencha todos os campos, incluindo ao menos uma categoria.");
-            return;
+    const handleSave = async () => {
+        const { date, time, maxStudents, teacherId, type, categories, description } = classForm;
+        if (!date || !time || !teacherId || !type || categories.length === 0) {
+            return alert("Por favor, preencha todos os campos obrigatórios.");
         }
-
-        if (editingClass) {
-            const [year, month, day] = date.split('-');
-            const [hour, minute] = time.split(':');
-            const classDate = new Date(year, parseInt(month) - 1, day, hour, minute);
-            setClasses(prev => prev.map(c => c.id === editingClass.id ? { ...c, date: classDate, maxStudents: parseInt(maxStudents), teacherId: parseInt(teacherId), type, categories: classCategories, description } : c)); 
-        } else if (recurrence.isRecurring && recurrence.days.length > 0) {
-            let classesToCreate = [];
-            let occurrencesFound = 0;
-            const startDate = new Date(`${date}T${time}`);
-            
-            for (let i = 0; occurrencesFound < recurrence.occurrences && i < 90; i++) { // Adicionado um limite de 90 dias para evitar loops infinitos
-                const newDate = new Date(startDate);
-                newDate.setDate(startDate.getDate() + i);
-
-                if (recurrence.days.includes(newDate.getDay())) {
-                    const newClassData = {
-                        date: newDate,
+        setIsSaving(true);
+    
+        try {
+            if (editingClass) {
+                // Lógica para editar uma aula existente
+                const [year, month, day] = date.split('-');
+                const [hour, minute] = time.split(':');
+                const classDate = new Date(year, parseInt(month) - 1, day, hour, minute);
+    
+                const classData = {
+                    id: editingClass.id,
+                    date: Timestamp.fromDate(classDate),
+                    maxStudents: parseInt(maxStudents),
+                    teacherId: teacherId,
+                    type, categories, description
+                };
+                await handleSaveClass(classData);
+            } else {
+                // Lógica para criar uma ou mais aulas novas
+                const startDate = new Date(`${date}T${time}`);
+                
+                if (recurrence.isRecurring && recurrence.days.length > 0) {
+                    // Cria aulas recorrentes
+                    let classesToCreate = [];
+                    let occurrencesFound = 0;
+                    for (let i = 0; occurrencesFound < recurrence.occurrences && i < 90; i++) {
+                        const newDate = new Date(startDate);
+                        newDate.setDate(startDate.getDate() + i);
+                        if (recurrence.days.includes(newDate.getDay())) {
+                            classesToCreate.push({
+                                date: Timestamp.fromDate(newDate),
+                                maxStudents: parseInt(maxStudents),
+                                teacherId: teacherId,
+                                type, categories, description
+                            });
+                            occurrencesFound++;
+                        }
+                    }
+                    // Idealmente, você teria uma função no contexto para salvar em lote
+                    await Promise.all(classesToCreate.map(cls => handleSaveClass(cls)));
+                } else {
+                    // Cria uma única aula
+                    await handleSaveClass({
+                        date: Timestamp.fromDate(startDate),
                         maxStudents: parseInt(maxStudents),
-                        type,
-                        categories: classCategories,
-                        description
-                    };
-                    classesToCreate.push({ ...newClassData, id: Date.now() + occurrencesFound, teacherId: parseInt(teacherId), checkedInStudents: [], lateCancellations: [] });
-                    occurrencesFound++;
+                        teacherId: teacherId,
+                        type, categories, description
+                    });
                 }
             }
-            setClasses(prev => [...prev, ...classesToCreate]);
-
-        } else {
-            const [year, month, day] = date.split('-');
-            const [hour, minute] = time.split(':');
-            const classDate = new Date(year, parseInt(month) - 1, day, hour, minute);
-            handleCreateClass({ date: classDate, maxStudents: parseInt(maxStudents), type, categories: classCategories, description }, parseInt(teacherId)); // Adicione description
+            setIsModalOpen(false);
+        } catch (error) {
+            console.error("Erro ao salvar aula:", error);
+            alert("Ocorreu um erro ao salvar a aula.");
+        } finally {
+            setIsSaving(false);
         }
-
-        setIsModalOpen(false);
     };
 
-    const openModalForNew = () => {
+    const openModalForNew = useCallback(() => {
         setEditingClass(null);
-        setClassForm(initialFormState(modalities));
+        setClassForm(initialFormState);
         setRecurrence(initialRecurrenceState);
         setIsModalOpen(true);
-    };
+    }, []);
 
-    const openModalForEdit = (cls) => {
+    const openModalForEdit = useCallback((cls) => {
         setEditingClass(cls);
         const d = new Date(cls.date);
         setClassForm({
@@ -87,12 +112,12 @@ export default function ClassManagementView() {
         });
         setRecurrence({ ...initialRecurrenceState, isRecurring: false });
         setIsModalOpen(true);
-    };
+    }, []);
 
     const requestDelete = (classId) => setDeleteModal({ isOpen: true, classId });
 
-    const confirmDelete = () => {
-        handleDeleteClass(deleteModal.classId);
+    const confirmDelete = async () => {
+        await handleDeleteClass(deleteModal.classId);
         setDeleteModal({ isOpen: false, classId: null });
     };
 
@@ -109,12 +134,7 @@ export default function ClassManagementView() {
                 Tem certeza que deseja excluir esta aula? Os check-ins dos alunos serão cancelados.
             </ConfirmModal>
 
-            <FullScreenFormModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                onSave={handleSave}
-                title={editingClass ? 'Editar Aula' : 'Nova Aula'}
-            >
+            <FullScreenFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSave} isSaving={isSaving} title={editingClass ? 'Editar Aula' : 'Nova Aula'}>
                 <ClassForm 
                     classForm={classForm}
                     setClassForm={setClassForm}

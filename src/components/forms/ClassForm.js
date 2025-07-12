@@ -1,5 +1,5 @@
 // src/components/forms/ClassForm.js
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useAppContext } from '../../context/AppContext';
 
 const weekDays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
@@ -8,7 +8,7 @@ const ClassForm = ({
   classForm,
   setClassForm,
   recurrence,
-  setRecurrence,
+  setRecurrence, // Esta prop é usada diretamente pelo onChange
   isEditing,
   isTeacherView = false
 }) => {
@@ -16,39 +16,34 @@ const ClassForm = ({
   const teachers = users.filter(u => u.role === 'teacher');
 
   const handleFormChange = (e) => {
-    const { name, value, checked } = e.target;
+    const { name, value, type, checked } = e.target;
     if (name === 'categories') {
       setClassForm(current => ({
         ...current,
         categories: checked
-          ? [...current.categories, value]
-          : current.categories.filter(c => c !== value),
+          ? [...(current.categories || []), value]
+          : (current.categories || []).filter(c => c !== value),
       }));
     } else {
       setClassForm(current => ({ ...current, [name]: value }));
     }
   };
 
+  // Função para controlar as mudanças na seção de recorrência
   const handleRecurrenceChange = (e) => {
     const { name, value, type, checked } = e.target;
-    if (name === 'days') {
-      const dayIndex = parseInt(value, 10);
-      setRecurrence(prev => ({
-        ...prev,
-        days: checked ? [...prev.days, dayIndex] : prev.days.filter(d => d !== dayIndex),
-      }));
-    } else {
-      setRecurrence(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
-    }
+    setRecurrence(prev => {
+        if (name === 'days') {
+            const dayIndex = parseInt(value, 10);
+            const currentDays = prev.days || [];
+            const newDays = checked
+                ? [...currentDays, dayIndex]
+                : currentDays.filter(d => d !== dayIndex);
+            return { ...prev, days: newDays };
+        }
+        return { ...prev, [name]: type === 'checkbox' ? checked : value };
+    });
   };
-  
-  // Efeito para selecionar modalidade automaticamente
-  useEffect(() => {
-    const availableModalities = isTeacherView ? currentUser.specialties : modalities;
-    if (availableModalities.length === 1 && !classForm.type) {
-        setClassForm(prev => ({ ...prev, type: availableModalities[0] }));
-    }
-  }, [isTeacherView, currentUser.specialties, modalities, classForm.type, setClassForm]);
 
   return (
     <div className="space-y-4">
@@ -60,15 +55,19 @@ const ClassForm = ({
           <label className="text-sm font-medium">Modalidade</label>
           <select name="type" value={classForm.type} onChange={handleFormChange} required className="mt-1 block w-full p-2 border rounded-md bg-white">
             <option value="" disabled>Selecione...</option>
-            {(isTeacherView ? currentUser.specialties : modalities).map(m => <option key={m} value={m}>{m}</option>)}
+            {(isTeacherView ? (currentUser.specialties || []) : modalities.map(m => m.name)).map(modalityName => (
+              <option key={modalityName} value={modalityName}>{modalityName}</option>
+            ))}
           </select>
         </div>
         {!isTeacherView && (
           <div>
             <label className="text-sm font-medium">Professor</label>
             <select name="teacherId" value={classForm.teacherId} onChange={handleFormChange} required className="mt-1 block w-full p-2 border rounded-md bg-white" disabled={!classForm.type}>
-              <option value="" disabled>Selecione...</option>
-              {teachers.filter(t => t.specialties.includes(classForm.type)).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              <option value="" disabled>Selecione um professor...</option>
+              {teachers
+                .filter(t => (t.specialties || []).includes(classForm.type))
+                .map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </div>
         )}
@@ -76,28 +75,21 @@ const ClassForm = ({
           <label className="font-semibold">Categorias</label>
           <div className="grid grid-cols-2 gap-2 mt-2">
             {categories.map(cat => (
-              <label key={cat} className="flex items-center gap-2">
-                <input type="checkbox" name="categories" value={cat} checked={classForm.categories?.includes(cat)} onChange={handleFormChange}/>
-                {cat}
+              <label key={cat.id} className="flex items-center gap-2">
+                <input type="checkbox" name="categories" value={cat.name} checked={classForm.categories?.includes(cat.name)} onChange={handleFormChange}/>
+                {cat.name}
               </label>
             ))}
           </div>
         </div>
       </div>
 
-      {/* NOVO CAMPO DE DESCRIÇÃO */}
       <div>
         <label className="text-sm font-medium">Descrição da Aula</label>
-        <textarea
-          name="description"
-          value={classForm.description || ''}
-          onChange={handleFormChange}
-          rows="3"
-          placeholder="Ex: Foco em bandeja, jogo-treino, etc."
-          className="mt-1 block w-full p-2 border rounded-md"
-        />
+        <textarea name="description" value={classForm.description || ''} onChange={handleFormChange} rows="3" placeholder="Ex: Foco em bandeja, jogo-treino, etc." className="mt-1 block w-full p-2 border rounded-md"/>
       </div>
 
+      {/* Esta seção agora será exibida corretamente no modo de criação */}
       {!isEditing && (
         <div className="p-4 border rounded-md space-y-4 mt-6">
           <label className="flex items-center gap-2">

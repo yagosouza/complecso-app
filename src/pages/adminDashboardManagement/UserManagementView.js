@@ -8,143 +8,107 @@ import { maskPhone } from '../../utils/helpers';
 import ClassPackManager from './ClassPackManager';
 
 export default function UserManagementView() {
-    const { users, setUsers, handleCreateUser, handleResetPassword, modalities, categories } = useAppContext();
+    const { users, handleSaveUser, handleResetPassword, modalities, categories } = useAppContext();
+    
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState(null);
     const [activeTab, setActiveTab] = useState('students');
+    const [isSaving, setIsSaving] = useState(false);
 
     const handleSearchTermChange = useCallback((e) => setSearchTerm(e.target.value), []);
 
     const openModalForNew = useCallback(() => {
-        // Lógica para pré-selecionar a modalidade
-        const defaultEnrolledIn = modalities.length === 1 ? modalities : [];
-
         setEditingUser({
-            id: null, name: '', username: '', role: activeTab === 'students' ? 'student' : 'teacher', 
-            status: 'active', phone: '', email: '', birthDate: '', 
-            // A modalidade padrão é aplicada aqui
-            enrolledIn: defaultEnrolledIn, 
-            specialties: [], 
-            classPacks: [],
-            categories: []
+            id: null, name: '', email: '', password: '', role: activeTab === 'students' ? 'student' : 'teacher', 
+            status: 'active', phone: '', birthDate: '', 
+            enrolledIn: [], specialties: [], classPacks: [], categories: []
         });
         setIsModalOpen(true);
-    }, [activeTab, modalities]);
+    }, [activeTab]);
 
     const openModalForEdit = useCallback((user) => {
         setEditingUser({
-            ...user,
-            classPacks: user.classPacks || [],
-            categories: user.categories || [],
-            enrolledIn: user.enrolledIn || [],
-            specialties: user.specialties || []
+            classPacks: [], categories: [], enrolledIn: [], specialties: [],
+            ...user
         });
         setIsModalOpen(true);
     }, []);
     
-    const handleFormChange = (e) => {
-        const { name, value, type, checked } = e.target;
-    
+    const handleFormChange = useCallback((e) => {
+        const { name, value, checked } = e.target;
         setEditingUser(currentUser => {
             if (!currentUser) return null;
-    
-            if (name === "categories" || name === "enrolledIn" || name === "specialties") {
+            if (["categories", "enrolledIn", "specialties"].includes(name)) {
                 const currentArray = currentUser[name] || [];
-                let newArray;
-    
-                if (checked) {
-                    newArray = [...currentArray, value];
-                } else {
-                    newArray = currentArray.filter(item => item !== value);
-                }
-    
+                const newArray = checked ? [...currentArray, value] : currentArray.filter(item => item !== value);
                 return { ...currentUser, [name]: newArray };
             }
-    
-            return {
-                ...currentUser,
-                [name]: type === 'checkbox' ? checked : value
-            };
+            return { ...currentUser, [name]: value };
         });
-    };
+    }, []);
     
-
-    const handleSave = () => {
+    const handleSave = useCallback(() => {
         if (!editingUser) return;
-    
-        const finalUserData = {
-            ...editingUser,
-            phone: editingUser.phone.replace(/\D/g, ''),
-        };
-    
-        if (finalUserData.id) {
-            setUsers(currentUsers =>
-                currentUsers.map(u => (u.id === finalUserData.id ? finalUserData : u))
-            );
-        } else {
-            handleCreateUser({
-                ...finalUserData,
-                password: 'password',
-                checkedInClassIds: [],
-                lateCancellations: []
-            });
-        }
-    
-        setIsModalOpen(false);
-        setEditingUser(null);
-    };
+
+        setIsSaving(true);
+
+        const finalUserData = { ...editingUser, phone: (editingUser.phone || '').replace(/\D/g, '') };
+        handleSaveUser(finalUserData, (error, successMessage) => {
+            setIsSaving(false);
+
+            if (error) return alert(error);
+            alert(successMessage);
+            setIsModalOpen(false);
+            setEditingUser(null);
+        });
+    }, [editingUser, handleSaveUser]);
 
     const filteredUsers = useMemo(() => {
-        if (!searchTerm) return users.filter(u => u.role !== 'admin');
+        const roleFilter = (user) => user.role !== 'admin';
+        if (!searchTerm) return users.filter(roleFilter);
         const term = searchTerm.toLowerCase();
-        return users.filter(u => u.role !== 'admin' && (u.name.toLowerCase().includes(term) || u.username.toLowerCase().includes(term)));
+        return users.filter(u => roleFilter(u) && (u.name.toLowerCase().includes(term) || u.email.toLowerCase().includes(term)));
     }, [users, searchTerm]);
 
     const students = useMemo(() => filteredUsers.filter(u => u.role === 'student'), [filteredUsers]);
     const teachers = useMemo(() => filteredUsers.filter(u => u.role === 'teacher'), [filteredUsers]);
+    
+    const triggerResetPassword = useCallback(async (email) => {
+        if (!email) return alert("Usuário sem e-mail cadastrado.");
+        if (window.confirm(`Deseja enviar um link de redefinição de senha para ${email}?`)) {
+            await handleResetPassword(email, (err, msg) => alert(err || msg));
+        }
+    }, [handleResetPassword]);
 
     return (
         <div className="space-y-6">
-            <FullScreenFormModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                onSave={handleSave}
-                title={editingUser?.id ? 'Editar Usuário' : 'Novo Usuário'}
-            >
+            <FullScreenFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSave} title={editingUser?.id ? 'Editar Usuário' : 'Novo Usuário'} isSaving={isSaving}>
                 {editingUser && (
                     <div className="space-y-6">
+                        {/* CORREÇÃO DE LAYOUT AQUI */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div><label className="text-sm font-medium">Nome</label><input type="text" name="name" value={editingUser.name} onChange={handleFormChange} className="w-full mt-1 p-2 border rounded-md"/></div>
-                            <div><label className="text-sm font-medium">Username</label><input type="text" name="username" value={editingUser.username} onChange={handleFormChange} className="w-full mt-1 p-2 border rounded-md"/></div>
-                            <div><label className="text-sm font-medium">Email</label><input type="email" name="email" value={editingUser.email} onChange={handleFormChange} className="w-full mt-1 p-2 border rounded-md"/></div>
+                            <div><label className="text-sm font-medium">Email</label><input type="email" name="email" value={editingUser.email} onChange={handleFormChange} disabled={!!editingUser.id} className="w-full mt-1 p-2 border rounded-md bg-gray-100 disabled:cursor-not-allowed"/></div>
+                            {!editingUser.id && (<div><label className="text-sm font-medium">Senha</label><input type="password" name="password" placeholder="Mínimo 6 caracteres" onChange={handleFormChange} className="w-full mt-1 p-2 border rounded-md"/></div>)}
                             <div><label className="text-sm font-medium">Telefone/Whats</label><input type="tel" name="phone" value={editingUser.phone || ''} onChange={e => setEditingUser({...editingUser, phone: maskPhone(e.target.value)})} className="w-full mt-1 p-2 border rounded-md"/></div>
-                            <div><label className="text-sm font-medium">Data de Nascimento</label><input type="date" name="birthDate" value={editingUser.birthDate} onChange={handleFormChange} className="w-full mt-1 p-2 border rounded-md"/></div>
+                            <div><label className="text-sm font-medium">Data de Nascimento</label><input type="date" name="birthDate" value={editingUser.birthDate || ''} onChange={handleFormChange} className="w-full mt-1 p-2 border rounded-md"/></div>
                             <div><label className="text-sm font-medium">Função</label><select name="role" value={editingUser.role} onChange={handleFormChange} className="w-full mt-1 p-2 border rounded-md bg-white"><option value="student">Aluno</option><option value="teacher">Professor</option></select></div>
+                            <div><label className="text-sm font-medium">Status</label><select name="status" value={editingUser.status} onChange={handleFormChange} className="w-full mt-1 p-2 border rounded-md bg-white"><option value="active">Ativo</option><option value="inactive">Inativo</option></select></div>
                         </div>
-
-                        <div><label className="font-semibold">Status</label><select name="status" value={editingUser.status} onChange={handleFormChange} className="w-full mt-1 p-2 border rounded-md bg-white"><option value="active">Ativo</option><option value="inactive">Inativo</option></select></div>
 
                         {editingUser.role === 'student' && (
                             <>
                                 <div className="p-4 border rounded-md space-y-4">
-                                    <label className="font-semibold">Categorias:</label>
+                                    <h3 className="font-semibold">Categorias do Aluno</h3>
                                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
-                                        {categories.map(cat => (
-                                            <label key={cat} className="flex items-center gap-2">
-                                                <input type="checkbox" name="categories" value={cat} checked={editingUser.categories?.includes(cat)} onChange={handleFormChange}/>{cat}
-                                            </label>
-                                        ))}
+                                        {categories.map(cat => (<label key={cat.id} className="flex items-center gap-2"><input type="checkbox" name="categories" value={cat.name} checked={editingUser.categories.includes(cat.name)} onChange={handleFormChange}/>{cat.name}</label>))}
                                     </div>
                                 </div>
                                 <div className="p-4 border rounded-md space-y-4">
-                                    <label className="font-semibold">Modalidades:</label>
+                                    <h3 className="font-semibold">Modalidades Matriculadas</h3>
                                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
-                                        {modalities.map(type => (
-                                            <label key={type} className="flex items-center gap-2">
-                                                <input type="checkbox" name="enrolledIn" value={type} checked={editingUser.enrolledIn?.includes(type)} onChange={handleFormChange}/>{type}
-                                            </label>
-                                        ))}
+                                        {modalities.map(m => (<label key={m.id} className="flex items-center gap-2"><input type="checkbox" name="enrolledIn" value={m.name} checked={editingUser.enrolledIn.includes(m.name)} onChange={handleFormChange}/>{m.name}</label>))}
                                     </div>
                                 </div>
                                 {editingUser.id && <ClassPackManager userId={editingUser.id} />}
@@ -153,44 +117,23 @@ export default function UserManagementView() {
 
                         {editingUser.role === 'teacher' && (
                              <div className="p-4 border rounded-md space-y-4">
-                                <label className="font-semibold">Especialidades:</label>
-                                <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 mt-1">{modalities.map(type => (<label key={type} className="flex items-center gap-2"><input type="checkbox" name="specialties" value={type} checked={editingUser.specialties?.includes(type)} onChange={handleFormChange}/>{type}</label>))}</div>
+                                <h3 className="font-semibold">Especialidades do Professor</h3>
+                                <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 mt-1">{modalities.map(m => (<label key={m.id} className="flex items-center gap-2"><input type="checkbox" name="specialties" value={m.name} checked={editingUser.specialties.includes(m.name)} onChange={handleFormChange}/>{m.name}</label>))}</div>
                              </div>
                         )}
 
-                        {editingUser.id && <button type="button" onClick={() => handleResetPassword(editingUser.id)} className="text-sm text-blue-600 hover:underline mt-2">Redefinir Senha</button>}
+                        {editingUser.id && <button type="button" onClick={() => triggerResetPassword(editingUser.email)} className="text-sm text-blue-600 hover:underline mt-4">Redefinir Senha</button>}
                     </div>
                 )}
             </FullScreenFormModal>
             
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div className="relative w-full sm:flex-grow">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
-                    <input type="text" placeholder="Buscar por nome ou usuário..." value={searchTerm} onChange={handleSearchTermChange} className="w-full pl-10 pr-4 py-2 border rounded-full"/>
-                </div>
-                <button onClick={openModalForNew} className="w-full sm:w-auto flex-shrink-0 flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold text-black bg-[#ddfb3b] rounded-full hover:opacity-90">
-                    <PlusCircle className="h-5 w-5" />
-                    Novo {activeTab === 'students' ? 'Aluno' : 'Professor'}
-                </button>
+                <div className="relative w-full sm:flex-grow"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/><input type="text" placeholder="Buscar por nome ou email..." value={searchTerm} onChange={handleSearchTermChange} className="w-full pl-10 pr-4 py-2 border rounded-full"/></div>
+                <button onClick={openModalForNew} className="w-full sm:w-auto flex-shrink-0 flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold text-black bg-[#ddfb3b] rounded-full hover:opacity-90"><PlusCircle className="h-5 w-5" />Novo {activeTab === 'students' ? 'Aluno' : 'Professor'}</button>
             </div>
-
+            
             <div>
-                <div className="border-b border-gray-200">
-                    <nav className="-mb-px flex gap-6" aria-label="Tabs">
-                        <button
-                            onClick={() => setActiveTab('students')}
-                            className={`shrink-0 border-b-2 px-1 pb-4 text-sm font-medium ${activeTab === 'students' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}`}
-                        >
-                            Alunos
-                        </button>
-                        <button
-                             onClick={() => setActiveTab('teachers')}
-                            className={`shrink-0 border-b-2 px-1 pb-4 text-sm font-medium ${activeTab === 'teachers' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}`}
-                        >
-                            Professores
-                        </button>
-                    </nav>
-                </div>
+                <div className="border-b border-gray-200"><nav className="-mb-px flex gap-6" aria-label="Tabs"><button onClick={() => setActiveTab('students')} className={`shrink-0 border-b-2 px-1 pb-4 text-sm font-medium ${activeTab === 'students' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}`}>Alunos</button><button onClick={() => setActiveTab('teachers')} className={`shrink-0 border-b-2 px-1 pb-4 text-sm font-medium ${activeTab === 'teachers' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}`}>Professores</button></nav></div>
             </div>
 
             <div>

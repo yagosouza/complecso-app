@@ -2,19 +2,32 @@
 import React, { useState } from 'react';
 import { Lock } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
-import { Link } from 'react-router-dom'; // Importe o Link
+import { Link } from 'react-router-dom';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    
+    // 1. Adiciona o estado de carregamento
+    const [isLoading, setIsLoading] = useState(false);
+    
     const { handleLogin, handleResetPassword } = useAppContext();
 
     const onLoginSubmit = (e) => {
         e.preventDefault();
         setError('');
+        
+        // 2. Ativa o loading antes de chamar o Firebase
+        setIsLoading(true);
+
         handleLogin(email, password, (err) => {
-            if (err) setError(err);
+            // 3. Desativa o loading ao final da operação
+            setIsLoading(false);
+            if (err) {
+                setError(err);
+            }
+            // Se não houver erro, o AppContext irá redirecionar automaticamente
         });
     };
 
@@ -22,8 +35,11 @@ export default function LoginPage() {
         const userEmail = prompt("Digite seu e-mail para redefinir a senha:");
         if (userEmail) {
             handleResetPassword(userEmail, (err, successMsg) => {
-                if (err) alert(err);
-                else alert(successMsg);
+                if (err) {
+                    alert(err);
+                } else {
+                    alert(successMsg);
+                }
             });
         }
     };
@@ -38,21 +54,31 @@ export default function LoginPage() {
                 <form className="space-y-6" onSubmit={onLoginSubmit}>
                     <div>
                         <label htmlFor="email" className="text-sm font-medium text-gray-700">E-mail</label>
-                        <div className="mt-1">
-                            <input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
-                        </div>
+                        <input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm" disabled={isLoading} />
                     </div>
                     <div>
                         <label htmlFor="password" className="text-sm font-medium text-gray-700">Senha</label>
-                        <div className="mt-1">
-                            <input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
-                        </div>
+                        <input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm" disabled={isLoading} />
                     </div>
+
                     {error && <p className="text-sm text-red-600 text-center">{error}</p>}
-                    <button type="submit" className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-bold text-black bg-[#ddfb3b] hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#e3fc5b] transition-all duration-300">
-                        <Lock className="h-5 w-5 mr-2" />
-                        Entrar
+                    
+                    {/* 4. Atualiza o botão para reagir ao estado 'isLoading' */}
+                    <button 
+                        type="submit" 
+                        className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-bold text-black bg-[#ddfb3b] hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#e3fc5b] transition-all duration-300 disabled:bg-gray-300 disabled:cursor-wait"
+                        disabled={isLoading}
+                    >
+                        {isLoading ? (
+                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-solid border-black border-e-transparent" role="status" />
+                        ) : (
+                            <>
+                                <Lock className="h-5 w-5 mr-2" />
+                                Entrar
+                            </>
+                        )}
                     </button>
+                    
                     <div className="text-sm text-center text-gray-600">
                         <Link to="/register" className="font-medium text-black hover:underline">
                             Criar uma conta
